@@ -6,8 +6,8 @@ import {
   LockKeyhole,
 } from "lucide-react";
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
 
+import { ArchitectureDiagram } from "@/components/architecture-diagram";
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
 import { Container, Section } from "@/components/container";
@@ -15,19 +15,6 @@ import { Reveal } from "@/components/reveal";
 import { DependencyVisual } from "@/components/dependency-visual";
 import { ProcessFlow } from "@/components/process-flow";
 import { siteConfig } from "@/app/site";
-
-const ArchitectureDiagram = dynamic(
-  () =>
-    import("@/components/architecture-diagram").then(
-      (mod) => mod.ArchitectureDiagram
-    ),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[520px] w-full animate-pulse rounded-sm border border-line bg-paper" />
-    ),
-  }
-);
 
 export const metadata: Metadata = {
   title: siteConfig.title,

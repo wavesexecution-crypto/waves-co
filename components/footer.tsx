@@ -60,7 +60,7 @@ export function Footer() {
         {/* Footer Bottom */}
         <div className="mt-16 border-t border-line/60 pt-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
-            © 2026 Wavesco. All rights reserved.
+            © 2023 Wavesco. All rights reserved.
           </p>
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
             Confidential intake // Secure submission

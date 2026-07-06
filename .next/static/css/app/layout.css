@@ -1265,6 +1265,9 @@ video {
 .mb-4 {
   margin-bottom: 1rem;
 }
+.mb-5 {
+  margin-bottom: 1.25rem;
+}
 .mb-6 {
   margin-bottom: 1.5rem;
 }
@@ -1446,9 +1449,6 @@ video {
 }
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-.cursor-default {
-  cursor: default;
 }
 .cursor-pointer {
   cursor: pointer;
@@ -1923,8 +1923,8 @@ video {
 .tracking-\[-0\.03em\] {
   letter-spacing: -0.03em;
 }
-.tracking-\[0\.08em\] {
-  letter-spacing: 0.08em;
+.tracking-\[\.14em\] {
+  letter-spacing: .14em;
 }
 .tracking-\[0\.12em\] {
   letter-spacing: 0.12em;
@@ -2497,10 +2497,6 @@ select {
     align-items: center;
   }
 
-  .lg\:items-stretch {
-    align-items: stretch;
-  }
-
   .lg\:px-10 {
     padding-left: 2.5rem;
     padding-right: 2.5rem;
@@ -2551,11 +2547,6 @@ select {
   .xl\:text-base {
     font-size: 1rem;
     line-height: 1.5rem;
-  }
-
-  .xl\:text-xs {
-    font-size: 0.75rem;
-    line-height: 1rem;
   }
 }
 

@@ -1,4 +1,4 @@
-// File: C:\Users\hp\Documents\Codex\2026-06-30\files-mentioned-by-the-user-you\app\page.tsx
+// File: C:\Users\hp\AppData\Local\Temp\opencode\waves-c0-favicon\app\page.tsx
 import * as entry from '../../../app/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

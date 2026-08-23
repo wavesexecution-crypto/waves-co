@@ -1,0 +1,8 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/robots.txt/route": "/robots.txt",
+  "/sitemap.xml/route": "/sitemap.xml",
+  "/architecture-audit/page": "/architecture-audit",
+  "/page": "/",
+  "/case-study/page": "/case-study"
+}

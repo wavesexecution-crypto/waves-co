@@ -194,6 +194,65 @@ export default function Home() {
         </Reveal>
       </Section>
 
+      <Section id="products" className="border-t border-line bg-paper/40 py-24 sm:py-32">
+        <Reveal className="max-w-3xl mb-16">
+          <Badge>Products</Badge>
+          <h2 className="mt-6 font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
+            Acquisition OS
+          </h2>
+          <p className="mt-6 max-w-2xl text-lg leading-[1.6] text-body">
+            Lead generation, qualification, and outreach. Discover qualified prospects without manual research and verification.
+          </p>
+        </Reveal>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Reveal delay={0.05}>
+            <article className="premium-card h-full rounded-sm p-8">
+              <h3 className="font-heading text-[22px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy mb-4">
+                Lead Discovery & Enrichment
+              </h3>
+              <p className="text-base leading-7 text-body">
+                Automated discovery, verification, and scoring across configured geographies.
+              </p>
+            </article>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <article className="premium-card h-full rounded-sm p-8">
+              <h3 className="font-heading text-[22px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy mb-4">
+                Qualification & Segmentation
+              </h3>
+              <p className="text-base leading-7 text-body">
+                Real-time scoring (A/B/C tiers) and multi-facet segmentation for targeted campaigns.
+              </p>
+            </article>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <article className="premium-card h-full rounded-sm p-8">
+              <h3 className="font-heading text-[22px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy mb-4">
+                AI-Driven Enrichment
+              </h3>
+              <p className="text-base leading-7 text-body">
+                Problem identification, opportunity assessment, and personalized outreach angles.
+              </p>
+            </article>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <article className="premium-card h-full rounded-sm p-8">
+              <h3 className="font-heading text-[22px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy mb-4">
+                Human Approval Gate
+              </h3>
+              <p className="text-base leading-7 text-body">
+                Review and approve campaigns before outreach. No automated email sending.
+              </p>
+            </article>
+          </Reveal>
+        </div>
+        <Reveal className="mt-12">
+          <Button href="https://dev.wavesco.in/products/acquisition-os" target="_blank" rel="noopener">
+            Deep Dive: Acquisition OS Architecture →
+          </Button>
+        </Reveal>
+      </Section>
+
       <section className="bg-navy py-24 text-white sm:py-32">
         <Container className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>

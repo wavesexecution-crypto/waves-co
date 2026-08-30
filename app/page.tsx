@@ -14,6 +14,7 @@ import { Container, Section } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { DependencyVisual } from "@/components/dependency-visual";
 import { ProcessFlow } from "@/components/process-flow";
+import { Products } from "@/components/products";
 import { siteConfig } from "@/app/site";
 
 export const metadata: Metadata = {
@@ -178,6 +179,8 @@ export default function Home() {
           </div>
         </div>
       </Section>
+
+      <Products />
 
       <Section id="process" className="py-24 sm:py-32">
         <Reveal className="max-w-3xl">

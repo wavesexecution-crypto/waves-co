@@ -36,6 +36,9 @@ export function Navigation() {
           </span>
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-medium text-body md:flex">
+          <Link className="transition-colors duration-200 hover:text-navy" href="#products">
+            Products
+          </Link>
           <Link className="transition-colors duration-200 hover:text-navy" href="/#process">
             Process
           </Link>

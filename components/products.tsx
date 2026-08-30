@@ -1,6 +1,6 @@
 import { Badge } from "@/components/badge";
 import { Button } from "@/components/button";
-import { Container, Section } from "@/components/container";
+import { Section } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { PRODUCTS } from "@/lib/products";
 
@@ -10,14 +10,14 @@ export function Products() {
       <Reveal className="max-w-3xl">
         <Badge>Products</Badge>
         <h2 className="mt-6 font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
-          Systems you can <span className="text-accent">run</span>, not slides you buy.
+          Acquisition OS
         </h2>
         <p className="mt-6 max-w-2xl text-lg leading-[1.6] text-body">
-          The same operating systems we install for founder-led companies — available as products. Clean handoffs, decision rights, and review loops, not tool sprawl.
+          Lead generation, qualification, and outreach. Discover qualified prospects without manual research and verification.
         </p>
       </Reveal>
 
-      <div className="mt-16 grid gap-4 md:grid-cols-3">
+      <div className="mt-16 grid gap-4 md:grid-cols-1">
         {PRODUCTS.map((p, i) => (
           <Reveal key={p.slug} delay={i * 0.05}>
             <article className="premium-card flex h-full flex-col rounded-sm p-8">
@@ -34,20 +34,13 @@ export function Products() {
               </ul>
               <div className="mt-8">
                 <Button href={p.href} variant="secondary" className="w-full">
-                  Explore {p.name} →
+                  Deep Dive: {p.name} Architecture →
                 </Button>
               </div>
             </article>
           </Reveal>
         ))}
       </div>
-
-      <Reveal className="mt-12 flex flex-col gap-4 sm:flex-row">
-        <Button href="https://dev.wavesco.in/products">Explore all products on dev.wavesco.in →</Button>
-        <Button href="https://dev.wavesco.in/products/wavesos" variant="secondary">
-          WavesOS details
-        </Button>
-      </Reveal>
     </Section>
   );
 }

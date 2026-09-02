@@ -1,3 +1,10 @@
 app/(prototype)
+app/business-config.ts
+app/lead-store.ts
+app/conversation-store.ts
+app/supabase
+app/components
 work
 supabase
+jsconfig.json
+pnpm-workspace.yaml

@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { prisma } from "./db";
 import bcrypt from "bcryptjs";
+import { lookupUserByEmail } from "./context";
 
 function resolveSecret(): string {
   const s = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
@@ -9,10 +9,10 @@ function resolveSecret(): string {
   return s;
 }
 
-async function findUserWithEmail(email: string, retries = 3): Promise<any> {
+async function findUserByEmail(email: string, retries = 3): Promise<Awaited<ReturnType<typeof lookupUserByEmail>>> {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      return await prisma.user.findFirst({ where: { email } });
+      return await lookupUserByEmail(email);
     } catch (err: any) {
       const isLast = attempt === retries - 1;
       const isConnectionError =
@@ -62,7 +62,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = typeof credentials?.email === "string" ? credentials.email.trim().toLowerCase() : "";
         const password = typeof credentials?.password === "string" ? credentials.password : "";
         if (!email || !password) return null;
-        const user = await findUserWithEmail(email);
+        const user = await findUserByEmail(email);
         if (!user?.passwordHash) return null;
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;

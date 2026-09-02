@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { prisma } from "./db";
+import { withTenantContext } from "./context";
 import bcrypt from "bcryptjs";
 
 export interface SignupResult {
@@ -23,18 +24,23 @@ export async function signupAction(_prevState: SignupResult, formData: FormData)
   if (password.length < 8) return { ok: false, error: "Password must be at least 8 characters." };
   if (!/[^A-Za-z0-9]/.test(password)) return { ok: false, error: "Use a stronger password." };
 
-  const existing = await prisma.user.findFirst({ where: { email } });
+  // Use the SECURITY DEFINER function to check for duplicate email (bypasses RLS)
+  const { lookupUserByEmail } = await import("./context");
+  const existing = await lookupUserByEmail(email);
   if (existing) return { ok: false, error: "An account with this email already exists." };
 
   const tenantId = `tenant_${randomUUID().replace(/-/g, "")}`;
   const userId = `user_${randomUUID().replace(/-/g, "")}`;
   const passwordHash = await bcrypt.hash(password, 10);
 
-  await prisma.tenant.create({
-    data: { id: tenantId, name: tenantName, slug: slugify(tenantName) },
-  });
-  await prisma.user.create({
-    data: { id: userId, tenantId, email, name: name || null, passwordHash, role: "owner", status: "active", emailVerified: new Date() },
+  // Create tenant + user inside RLS context
+  await withTenantContext(tenantId, async (tx: any) => {
+    await tx.tenant.create({
+      data: { id: tenantId, name: tenantName, slug: slugify(tenantName) },
+    });
+    await tx.user.create({
+      data: { id: userId, tenantId, email, name: name || null, passwordHash, role: "owner", status: "active", emailVerified: new Date() },
+    });
   });
 
   return { ok: true };

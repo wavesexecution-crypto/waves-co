@@ -1,14 +1,35 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "./db";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
 
 function resolveSecret(): string {
   const s = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
   if (!s || s.length < 32) throw new Error("AUTH_SECRET missing or too short");
   return s;
+}
+
+async function findUserWithEmail(email: string, retries = 3): Promise<any> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await prisma.user.findFirst({ where: { email } });
+    } catch (err: any) {
+      const isLast = attempt === retries - 1;
+      const isConnectionError =
+        err?.code === "P1001" ||
+        err?.message?.includes("Can't reach database") ||
+        err?.message?.includes("ECONNREFUSED") ||
+        err?.name === "PrismaClientInitializationError";
+      if (isConnectionError && !isLast) {
+        const delay = Math.pow(2, attempt) * 1000;
+        console.warn(`[auth] DB connection failed (attempt ${attempt + 1}/${retries}), retrying in ${delay}ms...`);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+  return null;
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -41,7 +62,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = typeof credentials?.email === "string" ? credentials.email.trim().toLowerCase() : "";
         const password = typeof credentials?.password === "string" ? credentials.password : "";
         if (!email || !password) return null;
-        const user = await prisma.user.findFirst({ where: { email } });
+        const user = await findUserWithEmail(email);
         if (!user?.passwordHash) return null;
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;

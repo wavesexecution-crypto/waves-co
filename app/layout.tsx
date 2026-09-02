@@ -3,6 +3,7 @@ import { IBM_Plex_Sans, IBM_Plex_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { Footer } from "@/components/footer";
 import { Navigation } from "@/components/navigation";
+import { Providers } from "@/components/providers";
 import { siteConfig } from "@/app/site";
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -100,6 +101,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${inter.variable}`}>
       <body>
+        <Providers>
         <script
           type="application/ld+json"
           suppressHydrationWarning
@@ -108,6 +110,7 @@ export default function RootLayout({
         <Navigation />
         {children}
         <Footer />
+        </Providers>
       </body>
     </html>
   );

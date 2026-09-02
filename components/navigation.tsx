@@ -2,11 +2,66 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/button";
 import { Container } from "@/components/container";
 
+function UserAvatar({ name, email }: { name: string; email: string }) {
+  const initials = name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const close = () => setOpen(false);
+    if (open) document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [open]);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(!open);
+        }}
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-navy text-sm font-medium text-white transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-navy focus:ring-offset-2"
+        aria-label="Profile menu"
+      >
+        {initials}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-line bg-white py-1 shadow-lg">
+          <div className="border-b border-line px-4 py-3">
+            <p className="text-sm font-medium text-navy">{name}</p>
+            <p className="text-xs text-muted truncate">{email}</p>
+          </div>
+          <Link href="https://app.wavesco.in" className="block px-4 py-2 text-sm text-body hover:bg-muted/50">
+            Dashboard
+          </Link>
+          <Link href="https://app.wavesco.in/settings" className="block px-4 py-2 text-sm text-body hover:bg-muted/50">
+            Account
+          </Link>
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="block w-full px-4 py-2 text-left text-sm text-destructive hover:bg-muted/50"
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Navigation() {
   const [scrolled, setScrolled] = useState(false);
+  const { data: session } = useSession();
+  const user = session?.user;
+  const isAuth = !!user;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -51,15 +106,21 @@ export function Navigation() {
           <Link className="transition-colors duration-200 hover:text-navy" href="/architecture-audit">
             Architecture Audit
           </Link>
-          <Link className="transition-colors duration-200 hover:text-navy" href="/login">
-            Sign in
-          </Link>
         </nav>
         <div className="hidden items-center gap-3 md:flex">
           <Button href="/architecture-audit" variant="ghost" className="hidden lg:inline-flex">
             Book Review
           </Button>
-          <Button href="/login">Sign in</Button>
+          {isAuth ? (
+            <UserAvatar name={user.name || user.email || "Waves"} email={user.email || ""} />
+          ) : (
+            <>
+              <Link href="/login" className="text-sm font-medium text-body transition-colors hover:text-navy">
+                Sign in
+              </Link>
+              <Button href="/login">Sign in →</Button>
+            </>
+          )}
         </div>
         <Button href="/architecture-audit" className="md:hidden">
           Book

@@ -1,12 +1,20 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Sign in — WavesCo",
-  description: "Continue with your Waves profile. One Waves account. All your products.",
-};
+import Link from "next/link";
+import { useState } from "react";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    // For now, this is a placeholder — the Waves identity will be handled via the main auth.
+    // In production, this would call signIn("credentials", { email, password, callbackUrl: "/login#..." })
+    // or redirect to the canonical Waves login.
+    window.location.href = "/";
+  }
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-paper flex items-center justify-center p-6">
       <div className="w-full max-w-md rounded-lg border border-line bg-white p-8 shadow-precise">
@@ -16,7 +24,7 @@ export default function LoginPage() {
         </p>
         <p className="mt-1 text-xs text-muted">One Waves account. All your products — including Acquisition OS when rented.</p>
 
-        <form className="mt-6 space-y-4" action="#" method="post">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label htmlFor="email" className="text-sm font-medium text-navy">
               Email
@@ -26,6 +34,8 @@ export default function LoginPage() {
               name="email"
               type="email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
               className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy"
             />
@@ -39,6 +49,8 @@ export default function LoginPage() {
               name="password"
               type="password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy"
             />
           </div>

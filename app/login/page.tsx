@@ -1,34 +1,14 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
+import { LoginForm } from "./login-form";
+
+export const metadata: Metadata = {
+  title: "Sign in — WavesCo",
+  description: "Continue with your Waves profile. One Waves account. All your products.",
+};
 
 export default function LoginPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setPending(true);
-    const result = await signIn("credentials", { email, password, redirect: false });
-    setPending(false);
-    if (result?.error) {
-      setError("Incorrect email or password.");
-      return;
-    }
-    const callbackUrl = searchParams.get("callbackUrl");
-    const safe = callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/";
-    router.push(safe);
-    router.refresh();
-  }
-
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-paper flex items-center justify-center p-6">
       <div className="w-full max-w-md rounded-lg border border-line bg-white p-8 shadow-precise">
@@ -38,41 +18,9 @@ export default function LoginPage() {
         </p>
         <p className="mt-1 text-xs text-muted">One Waves account. All your products — including Acquisition OS when rented.</p>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="email" className="text-sm font-medium text-navy">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="text-sm font-medium text-navy">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy"
-            />
-          </div>
-          {error ? <p role="alert" className="text-sm text-error">{error}</p> : null}
-          <button type="submit" disabled={pending} className="w-full rounded-md bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-light disabled:opacity-50">
-            {pending ? "Signing in…" : "Continue to Waves"}
-          </button>
-        </form>
+        <Suspense fallback={<div className="mt-6 h-32 animate-pulse rounded bg-muted" />}>
+          <LoginForm />
+        </Suspense>
 
         <p className="mt-4 text-center text-sm text-muted">
           No account yet?{" "}

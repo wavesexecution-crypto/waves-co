@@ -23,7 +23,21 @@ export function LoginForm() {
       return;
     }
     const callbackUrl = searchParams.get("callbackUrl");
-    const safe = callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/";
+    // Allow same-origin relative paths and absolute URLs to known Waves domains
+    let safe = "/";
+    if (callbackUrl) {
+      if (callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
+        safe = callbackUrl;
+      } else {
+        try {
+          const dest = new URL(callbackUrl);
+          const allowed = ["wavesco.in", "app.wavesco.in", "www.wavesco.in", "localhost"];
+          if (allowed.some((h) => dest.hostname === h || dest.hostname.endsWith(`.${h}`))) {
+            safe = callbackUrl;
+          }
+        } catch {}
+      }
+    }
     router.push(safe);
     router.refresh();
   }
@@ -61,7 +75,7 @@ export function LoginForm() {
       </div>
       {error ? <p role="alert" className="text-sm text-error">{error}</p> : null}
       <button type="submit" disabled={pending} className="w-full rounded-md bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-light disabled:opacity-50">
-        {pending ? "Signing in…" : "Continue to Waves"}
+        {pending ? "Signing in…" : "Sign in"}
       </button>
     </form>
   );

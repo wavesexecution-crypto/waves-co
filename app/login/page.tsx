@@ -24,8 +24,8 @@ export default function LoginPage() {
 
         <p className="mt-4 text-center text-sm text-muted">
           No account yet?{" "}
-          <Link href="/architecture-audit" className="font-medium text-navy hover:underline">
-            Book Architecture Review
+          <Link href="/signup" className="font-medium text-navy hover:underline">
+            Create your Waves account
           </Link>
         </p>
         <p className="mt-3 text-center text-xs text-muted">Login happens on the main Waves site. app.wavesco.in does not have an independent customer login.</p>

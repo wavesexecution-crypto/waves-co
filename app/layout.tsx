@@ -5,6 +5,7 @@ import { Footer } from "@/components/footer";
 import { Navigation } from "@/components/navigation";
 import { Providers } from "@/components/providers";
 import { siteConfig } from "@/app/site";
+import { auth } from "@/lib/auth";
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -93,15 +94,16 @@ const structuredData = {
   sameAs: [],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
   return (
     <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${inter.variable}`}>
       <body>
-        <Providers>
+        <Providers session={session}>
         <script
           type="application/ld+json"
           suppressHydrationWarning

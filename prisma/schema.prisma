@@ -1,0 +1,574 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+}
+
+// ------------------------------------------------------------------
+// Platform models. Module tables are added by each CafeOS module in
+// Phase 6 (each carries a tenantId column + RLS policy).
+//
+// RLS: the runtime role `wavesco_app` does NOT own these tables, so
+// row-level security (applied in migrations) is enforced for app
+// traffic. `withTenantContext()` sets `SET LOCAL app.tenant_id` inside
+// a transaction; all app queries must run within that context.
+// ------------------------------------------------------------------
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("starter")
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         User[]
+  modules       TenantModule[]
+  idempotency   IdempotencyKey[]
+  refreshTokens RefreshToken[]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email         String
+  name          String?
+  passwordHash  String?
+  role          String    @default("owner")
+  emailVerified DateTime?
+  status        String    @default("active")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  refreshTokens RefreshToken[]
+
+  @@unique([tenantId, email])
+  @@index([email])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Module {
+  id           String  @id @default(cuid())
+  name         String  @unique
+  displayName  String
+  description  String?
+  version      String
+  contractPath String
+
+  tenants TenantModule[]
+
+  createdAt DateTime @default(now())
+}
+
+model TenantModule {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  moduleId   String
+  module     Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  status     String   @default("enabled")
+  config     Json?
+  enabledAt  DateTime?
+  disabledAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([tenantId, moduleId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  userId    String?
+  action    String
+  model     String
+  recordId  String?
+  before    Json?
+  after     Json?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([model, recordId])
+  @@index([createdAt])
+}
+
+model IdempotencyKey {
+  id        String    @id @default(cuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  scope     String
+  key       String
+  response  Json?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  @@unique([tenantId, scope, key])
+  @@index([expiresAt])
+}
+
+// Auth.js verification tokens (magic link). Auth-level table, not
+// tenant-scoped; permissive RLS is applied by the migration.
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@index([expires])
+}
+
+// ==================================================================
+// WavesCo product models (2026-08). All carry tenantId + RLS policy
+// applied by migration 20260825010000_wavesco_product_models.
+// ==================================================================
+
+// --- Acquisition OS -----------------------------------------------------
+model GenerationBatch {
+  id              String    @id @default(cuid())
+  tenantId        String
+  requestId       String    @unique
+  params          Json
+  status          String    @default("queued")
+  stage           String?
+  requestedCount  Int?
+  resultLeadCount Int?
+  emailReadyCount Int?
+  engineBatchId   String?
+  pdfPath         String?
+  excelPath       String?
+  logTail         String?
+  error           String?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model Campaign {
+  id                String    @id @default(cuid())
+  tenantId          String
+  name              String
+  location          String?
+  category          String?
+  tier              String?
+  status            String    @default("draft")
+  sendingLimit      Int?
+  scheduledFor      DateTime?
+  eligibleSnapshot  Json?
+  createdByUserId   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model OutreachEmail {
+  id          String    @id @default(cuid())
+  tenantId    String
+  campaignId  String?
+  leadKey     String
+  business    String
+  email       String
+  subject     String
+  body        String
+  status      String    @default("draft")
+  approvalId  String?
+  messageId   String?
+  error       String?
+  submittedAt DateTime?
+  decidedAt   DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, campaignId])
+  @@index([tenantId, leadKey])
+}
+
+model FollowUp {
+  id              String    @id @default(cuid())
+  tenantId        String
+  leadKey         String?
+  business        String
+  dueAt           DateTime
+  status          String    @default("pending")
+  note            String?
+  channel         String    @default("email")
+  campaignId      String?
+  outreachEmailId String?
+  outreachOrderId String?
+  followUpNumber  Int       @default(1) @map("follow_up_number")
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  outreachOrder   OutreachOrder? @relation(fields: [outreachOrderId], references: [id])
+
+  @@index([tenantId, status, dueAt])
+}
+
+// --- Outreach Order Pipeline (Lead Intelligence → Email Outreach) -------
+// Research snapshot per lead, traceable to the engine corpus. One row per
+// (tenant, leadKey): refreshed in place, never duplicated.
+model LeadResearch {
+  id             String   @id @default(cuid())
+  tenantId       String
+  leadKey        String
+  engineLeadId   Int?
+  business       String
+  category       String?
+  area           String?
+  city           String?
+  website        String?
+  instagram      String?
+  rating         Float?
+  reviews        Int?
+  tier           String?
+  leadScore      Int?
+  digitalPresence String?
+  problem        String?
+  opportunity    String?
+  serviceFit     String?
+  angleSeed      String?
+  contactName    String?
+  contactRole    String?
+  email          String?
+  sourceUrls     Json?
+  verification   String?
+  notes          String?
+  researchedAt   DateTime @default(now())
+  checkedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([tenantId, leadKey])
+  @@index([tenantId, researchedAt])
+}
+
+// Persistent cold-email order for one eligible lead. Lifecycle:
+// READY_FOR_APPROVAL → PENDING → APPROVED → SENT → DELIVERED/FAILED,
+// with REJECTED / CANCELLED terminal states.
+model OutreachOrder {
+  id               String    @id @default(cuid())
+  tenantId         String
+  version          Int       @default(1)
+  leadKey          String
+  engineLeadId     Int?
+  businessName     String
+  contactName      String?
+  contactRole      String?
+  email            String
+  emailStatus      String    @default("VERIFIED")
+  researchSnapshot Json
+  opportunity      String?
+  outreachAngle    String?
+  subject          String
+  body             String
+  followupPlan     Json
+  plannerModel     String?
+  confidence       String    @default("medium")
+  status           String    @default("READY_FOR_APPROVAL")
+  approvalId       String?
+  sendId           String?
+  deliveryStatus   String?
+  replyStatus      String?
+  sendError        String?
+  senderIdentity   String?
+  aiEnabled        Boolean   @default(false) @map("ai_enabled")
+  aiModel          String?   @map("ai_model")
+  enrichmentStatus String?   @map("enrichment_status")
+  selectedService  String?   @map("selected_service")
+  personalizationContext Json? @map("personalization_context")
+  submittedAt      DateTime?
+  decidedAt        DateTime?
+  sentAt           DateTime?
+  cancelledAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  followups         FollowUp[]
+  lifecycleEvents   LeadLifecycleEvent[]
+
+  @@unique([tenantId, leadKey, version])
+  @@index([tenantId, status])
+  @@index([tenantId, email])
+}
+
+// Per-lead lifecycle event for full observability. One row per decision point.
+model LeadLifecycleEvent {
+  id               String   @id @default(cuid())
+  tenantId         String
+  leadKey          String
+  batchId          String?
+  stage            String
+  status           String
+  reason           String?
+  aiEnabled        Boolean  @default(false)
+  aiProvider       String?
+  aiModel          String?
+  enrichmentStatus String?
+  emailStatus      String?
+  eligibility      String?
+  orderId          String?
+  approvalId       String?
+  createdAt        DateTime @default(now())
+
+  outreachOrder OutreachOrder? @relation(fields: [orderId], references: [id])
+
+  @@index([tenantId, leadKey])
+  @@index([tenantId, stage])
+  @@index([tenantId, createdAt])
+  @@index([batchId])
+  @@map("LeadLifecycleEvent")
+}
+
+model ActivityEvent {
+  id         String   @id @default(cuid())
+  tenantId   String
+  type       String
+  title      String
+  entityType String?
+  entityId   String?
+  href       String?
+  metadata   Json?
+  sourceKey  String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, sourceKey])
+}
+
+// --- Client OS ----------------------------------------------------------
+model Client {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  company       String?
+  email         String?
+  phone         String?
+  status        String   @default("lead")
+  notes         String?
+  sourceLeadKey String?
+  ownerUserId   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model OnboardingStep {
+  id        String    @id @default(cuid())
+  tenantId  String
+  clientId  String
+  seq       Int
+  title     String
+  done      Boolean   @default(false)
+  doneAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([tenantId, clientId])
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  tenantId    String
+  clientId    String
+  name        String
+  description String?
+  status      String    @default("planning")
+  startDate   DateTime?
+  dueDate     DateTime?
+  budgetPaise Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tenantId, clientId])
+}
+
+model ProjectTask {
+  id             String    @id @default(cuid())
+  tenantId       String
+  projectId      String
+  title          String
+  status         String    @default("todo")
+  priority       String    @default("medium")
+  dueDate        DateTime?
+  completedAt    DateTime?
+  assigneeUserId String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([tenantId, projectId, status])
+}
+
+model Deliverable {
+  id          String    @id @default(cuid())
+  tenantId    String
+  projectId   String
+  title       String
+  type        String?
+  status      String    @default("draft")
+  dueDate     DateTime?
+  deliveredAt DateTime?
+  link        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tenantId, projectId, status])
+}
+
+// --- Automation OS ------------------------------------------------------
+model IntegrationStatus {
+  id            String   @id @default(cuid())
+  tenantId      String
+  key           String
+  state         String
+  detail        String?
+  lastCheckedAt DateTime @default(now())
+  lastOkAt      DateTime?
+
+  @@unique([tenantId, key])
+}
+
+// --- Waves AI Gateway ---------------------------------------------------
+// One AI configuration per tenant (current strategy: one client -> one
+// dedicated Ollama account). credentialRef is a REFERENCE (e.g. "env:VAR")
+// resolved server-side; secrets never live in the database.
+model ClientAiConfig {
+  id           String   @id @default(cuid())
+  tenantId     String   @unique
+  aiEnabled    Boolean  @default(false)
+  provider     String   @default("ollama_cloud")
+  baseUrl      String?
+  model        String?
+  credentialRef String?
+  obsidianRoot String?
+  config       Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// Per-tenant usage ledger for every gateway call.
+model AiUsageLog {
+  id            String   @id @default(cuid())
+  tenantId      String
+  operation     String
+  provider      String
+  model         String
+  status        String
+  inputTokens   Int?
+  outputTokens  Int?
+  estimatedCostUsd Float?
+  latencyMs     Int?
+  error         String?
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}
+
+// --- Acquisition Brief / Company Acquisition Profile ------------------------
+// Canonical client business context — one per tenant, tenant-isolated.
+// The OS converts this context into an acquisition operation. No tier gating.
+model AcquisitionProfile {
+  id                       String                    @id @default(cuid())
+  tenantId                 String                    @unique
+  status                   String                    @default("DRAFT")
+  version                  Int                       @default(1)
+  // 1 COMPANY
+  companyName              String?
+  website                  String?
+  industry                 String?
+  whatWeSell               String?
+  productsServices         Json?
+  locationsServed          Json?
+  businessModel            String?
+  // 2 OBJECTIVE
+  acquisitionObjective     String?
+  primaryObjective         String?
+  targetQuantity           Int?
+  targetTimeframe          String?
+  priorityProductService   String?
+  // 3 ICP
+  icp                      Json?
+  // 5 OFFER
+  offer                    Json?
+  // 6 BRAND
+  brand                    Json?
+  // 7 INFRA
+  integrations             Json?
+  // 8 RULES
+  rules                    Json?
+  readiness                Json?
+  activatedAt              DateTime?
+  pausedAt                 DateTime?
+  suspendedAt              DateTime?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  dataImports              AcquisitionDataImport[]
+
+  @@index([tenantId, status])
+  @@map("AcquisitionProfile")
+}
+
+model AcquisitionDataImport {
+  id        String             @id @default(cuid())
+  tenantId  String
+  profileId String
+  profile   AcquisitionProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  fileName  String
+  fileType  String
+  rowCount  Int?
+  status    String             @default("pending")
+  summary   Json?
+  error     String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([tenantId, profileId])
+  @@index([tenantId, status])
+  @@map("AcquisitionDataImport")
+}
+
+// --- Waves Identity — cross-site handoff (single-use, short-lived, cryptographically protected) ---
+// Used for explicit "Open App" handoff when shared cookie is not present.
+// The JWT itself is signed with JWT_SECRET/AUTH_SECRET, carries jti, aud=app.wavesco.in, destination.
+// The row tracks single-use and prevents replay; handoff never puts secrets in URL query.
+model WavesHandoffToken {
+  id          String    @id @default(cuid())
+  jti         String    @unique
+  tenantId    String
+  userId      String
+  destination String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([expiresAt])
+  @@map("WavesHandoffToken")
+}

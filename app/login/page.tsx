@@ -2,17 +2,31 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useSearchParams, useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // For now, this is a placeholder — the Waves identity will be handled via the main auth.
-    // In production, this would call signIn("credentials", { email, password, callbackUrl: "/login#..." })
-    // or redirect to the canonical Waves login.
-    window.location.href = "/";
+    setError(null);
+    setPending(true);
+    const result = await signIn("credentials", { email, password, redirect: false });
+    setPending(false);
+    if (result?.error) {
+      setError("Incorrect email or password.");
+      return;
+    }
+    const callbackUrl = searchParams.get("callbackUrl");
+    const safe = callbackUrl?.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/";
+    router.push(safe);
+    router.refresh();
   }
 
   return (
@@ -54,8 +68,9 @@ export default function LoginPage() {
               className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy"
             />
           </div>
-          <button type="submit" className="w-full rounded-md bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-light">
-            Continue to Waves
+          {error ? <p role="alert" className="text-sm text-error">{error}</p> : null}
+          <button type="submit" disabled={pending} className="w-full rounded-md bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-light disabled:opacity-50">
+            {pending ? "Signing in…" : "Continue to Waves"}
           </button>
         </form>
 

@@ -23,8 +23,7 @@ export function LoginForm() {
       return;
     }
     const callbackUrl = searchParams.get("callbackUrl");
-    // Allow same-origin relative paths and absolute URLs to known Waves domains
-    let safe = "/";
+    let safe: string | null = null;
     if (callbackUrl) {
       if (callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")) {
         safe = callbackUrl;
@@ -32,14 +31,19 @@ export function LoginForm() {
         try {
           const dest = new URL(callbackUrl);
           const allowed = ["wavesco.in", "app.wavesco.in", "www.wavesco.in", "localhost"];
-          if (allowed.some((h) => dest.hostname === h || dest.hostname.endsWith(`.${h}`))) {
+          if (allowed.some((h) => dest.hostname === h || dest.hostname.endsWith("." + h))) {
             safe = callbackUrl;
           }
         } catch {}
       }
     }
-    router.push(safe);
-    router.refresh();
+    const dest = safe ?? "/";
+    if (dest.startsWith("http")) {
+      window.location.href = dest;
+    } else {
+      router.push(dest);
+      router.refresh();
+    }
   }
 
   return (

@@ -16,6 +16,7 @@ import { DependencyVisual } from "@/components/dependency-visual";
 import { ProcessFlow } from "@/components/process-flow";
 import { auditCycle } from "@/lib/audit-cycle";
 import { Products } from "@/components/products";
+import { LeasePricing } from "@/components/lease-pricing";
 import { siteConfig } from "@/app/site";
 
 export const metadata: Metadata = {
@@ -284,6 +285,8 @@ export default function Home() {
       </Section>
 
       <Products />
+
+      <LeasePricing />
 
       <Section id="process" className="py-24 sm:py-32">
         <Container className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">

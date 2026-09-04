@@ -2,16 +2,19 @@
 
 import { useActionState } from "react";
 import { signupAction, type SignupResult } from "@/lib/signup";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const initialState: SignupResult = { ok: false };
 
 export function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl");
   const [state, formAction, isPending] = useActionState(async (prev: SignupResult, formData: FormData) => {
     const res = await signupAction(prev, formData);
     if (res.ok) {
-      router.push("/login");
+      const dest = callbackUrl ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/login";
+      router.push(dest);
     }
     return res;
   }, initialState);

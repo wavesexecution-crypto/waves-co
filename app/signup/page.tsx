@@ -8,7 +8,10 @@ export const metadata: Metadata = {
   description: "One Waves account. All your products.",
 };
 
-export default function SignupPage() {
+export default async function SignupPage({ searchParams }: { searchParams?: Promise<{ callbackUrl?: string }> }) {
+  const params = await searchParams;
+  const callbackUrl = params?.callbackUrl;
+  const loginHref = callbackUrl ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/login";
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-paper flex items-center justify-center p-6">
       <div className="w-full max-w-md rounded-lg border border-line bg-white p-8 shadow-precise">
@@ -19,7 +22,7 @@ export default function SignupPage() {
         </Suspense>
         <p className="mt-4 text-center text-sm text-muted">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-navy hover:underline">
+          <Link href={loginHref} className="font-medium text-navy hover:underline">
             Continue with your Waves profile
           </Link>
         </p>

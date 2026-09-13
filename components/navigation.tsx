@@ -114,12 +114,7 @@ export function Navigation() {
           {isAuth ? (
             <UserAvatar name={user.name || user.email || "Waves"} email={user.email || ""} />
           ) : (
-            <>
-              <Link href="/login" className="text-sm font-medium text-body transition-colors hover:text-navy">
-                Sign in
-              </Link>
-              <Button href="/login">Sign in →</Button>
-            </>
+            <Button href="/login">Sign in →</Button>
           )}
         </div>
         <Button href="/architecture-audit" className="md:hidden">

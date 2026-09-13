@@ -14,6 +14,57 @@ function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
+/**
+ * Maps unexpected failures to a user-safe message. NEVER returns Prisma
+ * internals (constraint names, query text, error codes) to the client —
+ * those are logged server-side only.
+ */
+function toSignupErrorMessage(): string {
+  return "Something went wrong creating your account. Please try again.";
+}
+
+function isSlugConflict(err: unknown): boolean {
+  const e = err as { code?: string; meta?: { target?: unknown } };
+  if (e?.code !== "P2002") return false;
+  const target = e?.meta?.target;
+  const fields = Array.isArray(target) ? target.map(String) : [String(target ?? "")];
+  return fields.includes("slug");
+}
+
+/** Creates tenant + user atomically. Two companies may share a display name,
+ *  so slug collisions are resolved with a unique suffix and a FRESH
+ *  transaction per attempt: Postgres aborts the enclosing transaction on the
+ *  first failed statement, so retrying inside the same transaction can never
+ *  succeed. Each attempt is still all-or-nothing (no partial workspaces). */
+async function createAccountAtomically(
+  tenantId: string,
+  userId: string,
+  tenantName: string,
+  email: string,
+  name: string,
+  passwordHash: string,
+): Promise<void> {
+  const base = slugify(tenantName) || "workspace";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const slug = attempt === 0 ? base : `${base}-${randomUUID().replace(/-/g, "").slice(0, 6)}`;
+    try {
+      await withTenantContext(tenantId, async (tx: any) => {
+        await tx.tenant.create({
+          data: { id: tenantId, name: tenantName, slug },
+        });
+        await tx.user.create({
+          data: { id: userId, tenantId, email, name: name || null, passwordHash, role: "owner", status: "active", emailVerified: new Date() },
+        });
+      });
+      return;
+    } catch (e) {
+      if (isSlugConflict(e) && attempt < 2) continue;
+      throw e;
+    }
+  }
+  throw new Error("Could not allocate a workspace slug");
+}
+
 export async function signupAction(_prevState: SignupResult, formData: FormData): Promise<SignupResult> {
   const tenantName = typeof formData.get("tenantName") === "string" ? (formData.get("tenantName") as string).trim() : "";
   const name = typeof formData.get("name") === "string" ? (formData.get("name") as string).trim() : "";
@@ -33,15 +84,19 @@ export async function signupAction(_prevState: SignupResult, formData: FormData)
   const userId = `user_${randomUUID().replace(/-/g, "")}`;
   const passwordHash = await bcrypt.hash(password, 10);
 
-  // Create tenant + user inside RLS context
-  await withTenantContext(tenantId, async (tx: any) => {
-    await tx.tenant.create({
-      data: { id: tenantId, name: tenantName, slug: slugify(tenantName) },
-    });
-    await tx.user.create({
-      data: { id: userId, tenantId, email, name: name || null, passwordHash, role: "owner", status: "active", emailVerified: new Date() },
-    });
-  });
+  // Create tenant + user atomically: either both rows exist or neither does
+  // (no half-created workspaces on failure).
+  // Every unexpected failure returns a clean message — the app has no error
+  // boundary on this route, so a throw would become a full-page crash.
+  try {
+    await createAccountAtomically(tenantId, userId, tenantName, email, name, passwordHash);
+  } catch (e) {
+    // Server-side signal only: constraint target, never query text/params
+    // (which would include the password hash).
+    const err = e as { code?: string; meta?: { target?: unknown } };
+    console.error("[signup] account creation failed", { code: err?.code ?? "unknown", target: err?.meta?.target ?? null });
+    return { ok: false, error: toSignupErrorMessage() };
+  }
 
   return { ok: true };
 }

@@ -87,18 +87,32 @@ export function Navigation() {
           <span className="font-heading text-2xl font-bold tracking-[0.12em] uppercase">WAVES</span>
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-medium text-body md:flex">
+          <Link className="transition-colors duration-200 hover:text-navy" href="/#audit-cycle">
+            Product
+          </Link>
+          <Link className="transition-colors duration-200 hover:text-navy" href="/#products">
+            Products
+          </Link>
           <Link className="transition-colors duration-200 hover:text-navy" href="/case-study">
             Case Study
           </Link>
+          <Link className="transition-colors duration-200 hover:text-navy" href="/architecture-audit">
+            Start with WAVES
+          </Link>
         </nav>
         <div className="hidden items-center gap-3 md:flex">
+          <Button href="/architecture-audit" variant="ghost" className="hidden lg:inline-flex">
+            Start with WAVES
+          </Button>
           {isAuth ? (
             <UserAvatar name={user.name || user.email || "WAVES"} email={user.email || ""} />
           ) : (
             <Button href="/login">Sign in</Button>
           )}
         </div>
-        
+        <Button href="/architecture-audit" className="md:hidden">
+          Start
+        </Button>
       </Container>
     </header>
   );

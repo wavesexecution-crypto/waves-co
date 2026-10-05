@@ -88,9 +88,6 @@ export default function Home() {
               WAVES handles the work behind your business, from finding customers to running day-to-day operations.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Button href="/architecture-audit">
-                Start with WAVES
-              </Button>
               <Button href="/case-study" variant="secondary">
                 See how it works
               </Button>

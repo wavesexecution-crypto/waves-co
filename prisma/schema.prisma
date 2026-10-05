@@ -19,11 +19,14 @@ datasource db {
 // ------------------------------------------------------------------
 
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  plan      String   @default("starter")
-  status    String   @default("active")
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+  // Acquisition OS is one complete product — no tiers. This field is
+  // retained for compatibility and must NOT drive access. All access is
+  // driven by AcquisitionEntitlement via lib/billing.ts.
+  plan   String @default("one")
+  status String @default("active")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

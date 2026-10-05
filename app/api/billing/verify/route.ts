@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/context";
-import { LEASE_PRICES } from "@/lib/billing";
-import crypto from "crypto";
+import { LEASE_PRICES } from "@/lib/leases";
+import { fetchRazorpayPayment, isRazorpayConfigured, verifyRazorpaySignature } from "@/lib/razorpay";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +17,10 @@ export async function POST(req: Request) {
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json({ error: "Missing razorpay fields" }, { status: 400 });
     }
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    if (!keySecret || !keyId) return NextResponse.json({ error: "payment_provider_not_configured" }, { status: 503 });
+    if (!isRazorpayConfigured()) return NextResponse.json({ error: "payment_provider_not_configured" }, { status: 503 });
 
-    // Verify HMAC
-    const expected = crypto.createHmac("sha256", keySecret).update(`${razorpay_order_id}|${razorpay_payment_id}`).digest("hex");
-    if (expected !== razorpay_signature) {
+    // Verify HMAC signature — secret never leaves the server
+    if (!verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature)) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
@@ -36,13 +33,9 @@ export async function POST(req: Request) {
         const ent = await tx.acquisitionEntitlement.findUnique({ where: { tenantId } });
         return { order, entitlement: ent, reused: true };
       }
-      // Verify amount via Razorpay fetch (optional)
-      const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
-      const resp = await fetch(`https://api.razorpay.com/v1/payments/${razorpay_payment_id}`, {
-        headers: { Authorization: `Basic ${auth}` },
-      });
-      const pay: any = await resp.json().catch(() => ({}));
-      if (!resp.ok || pay.status !== "captured") {
+      // Confirm with Razorpay that the payment was actually captured
+      const { ok, pay } = await fetchRazorpayPayment(razorpay_payment_id);
+      if (!ok || pay.status !== "captured") {
         await tx.acquisitionOrder.update({ where: { id: order.id }, data: { status: "PAYMENT_FAILED", paymentId: razorpay_payment_id, signature: razorpay_signature } });
         return { error: "Payment not captured", status: 400 };
       }
@@ -51,14 +44,28 @@ export async function POST(req: Request) {
       }
       const pricing = LEASE_PRICES[order.leaseType as keyof typeof LEASE_PRICES];
       if (!pricing) return { error: "Invalid leaseType on order", status: 400 };
+      // Locked-price guard: the order amount must equal the current locked
+      // price. If pricing changed mid-checkout, reject rather than activate
+      // at the wrong value.
+      if (order.amountPaise !== pricing.paise) {
+        return { error: "Price changed — please create a new order", status: 400 };
+      }
 
       const updatedOrder = await tx.acquisitionOrder.update({
         where: { id: order.id },
         data: { paymentId: razorpay_payment_id, signature: razorpay_signature, status: "PAYMENT_VERIFIED" },
       });
 
+      // Explicit extension, no auto-renewal: if the tenant still has an
+      // unexpired ACTIVE lease, extend from its expiry so paid days are not
+      // lost. Otherwise start now. Trial history is preserved to block reuse.
       const now = new Date();
-      const expires = new Date(now.getTime() + pricing.days * 24 * 60 * 60 * 1000);
+      const current = await tx.acquisitionEntitlement.findUnique({ where: { tenantId } });
+      const base =
+        current?.status === "ACTIVE" && current?.expiresAt && new Date(current.expiresAt) > now
+          ? new Date(current.expiresAt)
+          : now;
+      const expires = new Date(base.getTime() + pricing.days * 24 * 60 * 60 * 1000);
       const ent = await tx.acquisitionEntitlement.upsert({
         where: { tenantId },
         create: {

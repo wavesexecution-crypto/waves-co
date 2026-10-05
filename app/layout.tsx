@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Mono, Inter } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import { Footer } from "@/components/footer";
 import { Navigation } from "@/components/navigation";
@@ -7,25 +7,25 @@ import { Providers } from "@/components/providers";
 import { siteConfig } from "@/app/site";
 import { auth } from "@/lib/auth";
 
-const ibmPlexSans = IBM_Plex_Sans({
+const geistSans = Geist({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
   display: "swap",
+  weight: ["400", "500", "600"],
 });
 
-const ibmPlexMono = IBM_Plex_Mono({
+const geistMono = Geist_Mono({
   subsets: ["latin"],
-  weight: ["400", "500"],
   variable: "--font-mono",
   display: "swap",
+  weight: ["400", "500"],
 });
 
-const inter = Inter({
+const instrumentSans = Instrument_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
+  variable: "--font-display",
   display: "swap",
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -101,17 +101,17 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
   return (
-    <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${inter.variable}`}>
-      <body>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${instrumentSans.variable}`}>
+      <body className="font-sans antialiased">
         <Providers session={session}>
-        <script
-          type="application/ld+json"
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-        />
-        <Navigation />
-        {children}
-        <Footer />
+          <script
+            type="application/ld+json"
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+          />
+          <Navigation />
+          {children}
+          <Footer />
         </Providers>
       </body>
     </html>

@@ -82,43 +82,36 @@ export function Navigation() {
         <Link
           href="/"
           className="focus-ring flex items-center gap-4 rounded-sm text-navy"
-          aria-label="Waves home"
+          aria-label="WAVES home"
         >
-          <span className="font-heading text-2xl font-bold tracking-[0.12em] uppercase">Waves</span>
-          <span className="hidden h-4 w-px bg-line/80 sm:block" />
-          <span className="hidden font-mono text-[10px] uppercase tracking-[0.2em] text-muted sm:inline">
-            Systems Architecture
-          </span>
+          <span className="font-heading text-2xl font-bold tracking-[0.12em] uppercase">WAVES</span>
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-medium text-body md:flex">
           <Link className="transition-colors duration-200 hover:text-navy" href="/#audit-cycle">
-            Audit Cycle
+            Product
           </Link>
-          <Link className="transition-colors duration-200 hover:text-navy" href="#products">
+          <Link className="transition-colors duration-200 hover:text-navy" href="/#products">
             Products
-          </Link>
-          <Link className="transition-colors duration-200 hover:text-navy" href="/#process">
-            Process
           </Link>
           <Link className="transition-colors duration-200 hover:text-navy" href="/case-study">
             Case Study
           </Link>
           <Link className="transition-colors duration-200 hover:text-navy" href="/architecture-audit">
-            Architecture Audit
+            Start with WAVES
           </Link>
         </nav>
         <div className="hidden items-center gap-3 md:flex">
           <Button href="/architecture-audit" variant="ghost" className="hidden lg:inline-flex">
-            Book Review
+            Start with WAVES
           </Button>
           {isAuth ? (
-            <UserAvatar name={user.name || user.email || "Waves"} email={user.email || ""} />
+            <UserAvatar name={user.name || user.email || "WAVES"} email={user.email || ""} />
           ) : (
-            <Button href="/login">Sign in →</Button>
+            <Button href="/login">Sign in</Button>
           )}
         </div>
         <Button href="/architecture-audit" className="md:hidden">
-          Book
+          Start
         </Button>
       </Container>
     </header>

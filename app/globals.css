@@ -13,6 +13,18 @@
   --line: #d1d5db;
   --body: #4a5568;
   --muted: #94a3b8;
+  /* Waves OS alignment — same core as app.wavesco.in dark */
+  --background: 36 33% 98%;
+  --foreground: 222 47% 7%;
+  --card: 0 0% 100%;
+  --card-hover: 38 20% 96%;
+  --muted-waves: 38 15% 94%;
+  --muted-foreground: 222 10% 42%;
+  --border: 222 14% 88%;
+  --border-strong: 222 14% 84%;
+  --accent-waves: 173 84% 42%;
+  --ring: 222 47% 11%;
+  --radius: 8px;
 }
 
 * {
@@ -21,20 +33,23 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   margin: 0;
   background: var(--paper);
   color: var(--body);
-  font-family: var(--font-sans), "IBM Plex Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-feature-settings: "rlig" 1, "calt" 1;
+  letter-spacing: -0.011em;
   text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background: rgba(0, 194, 209, 0.22);
+  background: hsl(var(--accent-waves) / 0.18);
   color: var(--navy-dark);
 }
 
@@ -77,7 +92,7 @@ select {
 .premium-card {
   border: 1px solid var(--line);
   background: #fff;
-  box-shadow: 0 2px 8px rgba(6, 20, 46, 0.02);
+  box-shadow: 0 1px 2px hsl(222 47% 2% / 0.06), 0 4px 12px hsl(222 47% 2% / 0.04);
   transition:
     border-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -85,17 +100,17 @@ select {
 }
 
 .premium-card:hover {
-  border-color: rgba(10, 31, 68, 0.28);
-  box-shadow: 0 14px 34px rgba(6, 20, 46, 0.07);
-  transform: translateY(-2px);
+  border-color: rgba(10, 31, 68, 0.16);
+  box-shadow: 0 4px 16px hsl(222 47% 2% / 0.08);
 }
 
 .field-control {
   min-height: 48px;
-  border-radius: 2px;
+  border-radius: 8px;
   border: 1px solid var(--line);
   background: rgba(247, 249, 251, 0.72);
   color: var(--navy);
+  font-family: var(--font-sans);
   transition:
     background-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -103,7 +118,7 @@ select {
 }
 
 .field-control:hover {
-  border-color: rgba(10, 31, 68, 0.32);
+  border-color: rgba(10, 31, 68, 0.2);
   background: #fff;
 }
 
@@ -111,7 +126,7 @@ select {
   outline: none;
   border-color: var(--accent);
   background: #fff;
-  box-shadow: 0 0 0 4px rgba(0, 194, 209, 0.12);
+  box-shadow: 0 0 0 3px rgba(0, 194, 209, 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {

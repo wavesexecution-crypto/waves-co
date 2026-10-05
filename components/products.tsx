@@ -8,16 +8,16 @@ export function Products() {
   return (
     <Section id="products" className="py-24 sm:py-32">
       <Reveal className="max-w-3xl">
-        <Badge>Products</Badge>
+        <Badge>Other WAVES products</Badge>
         <h2 className="mt-6 font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
-          Acquisition OS
+          Specialized tools for specific work.
         </h2>
         <p className="mt-6 max-w-2xl text-lg leading-[1.6] text-body">
-          Lead generation, qualification, and outreach. Discover qualified prospects without manual research and verification.
+          Each product handles one function deeply. They work standalone or together with WAVES ONE.
         </p>
       </Reveal>
 
-      <div className="mt-16 grid gap-4 md:grid-cols-1">
+      <div className="mt-16 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {PRODUCTS.map((p, i) => (
           <Reveal key={p.slug} delay={i * 0.05}>
             <article className="premium-card flex h-full flex-col rounded-sm p-8">
@@ -34,7 +34,7 @@ export function Products() {
               </ul>
               <div className="mt-8">
                 <Button href={p.href} variant="secondary" className="w-full">
-                  Deep Dive: {p.name} Architecture →
+                  View {p.name}
                 </Button>
               </div>
             </article>

@@ -1,25 +1,48 @@
-import { prisma } from "./db";
 import { withTenantContext } from "./context";
+import {
+  LEASE_PRICES,
+  amountForLease as amountForLeaseLocked,
+  isPaidLeaseType,
+  isValidLeaseType as isValidLeaseTypeLocked,
+} from "./leases";
 
-export const LEASE_PRICES: Record<string, { paise: number; days: number; rupees: number; monthly: number; save: number }> = {
-  LEASE_30: { paise: 6000000, days: 30, rupees: 60000, monthly: 60000, save: 0 },
-  LEASE_90: { paise: 16500000, days: 90, rupees: 165000, monthly: 55000, save: 15000 },
-  LEASE_180:{ paise: 30000000, days: 180, rupees: 300000, monthly: 50000, save: 60000 },
-  LEASE_365:{ paise: 54000000, days: 365, rupees: 540000, monthly: 45000, save: 240000 },
-  TRIAL_2D:{ paise: 0, days: 2, rupees: 0, monthly: 0, save: 0 },
-};
+export { LEASE_PRICES } from "./leases";
+export type { LeasePrice, LeaseTypeString as LeaseType } from "./leases";
 
-export type LeaseType = keyof typeof LEASE_PRICES;
 export type EntitlementStatus = "TRIAL" | "TRIAL_EXPIRED" | "ACTIVE" | "EXPIRED" | "CANCELLED" | "REFUNDED";
 
-export function isValidLeaseType(v: string): v is LeaseType {
-  return v in LEASE_PRICES;
+export function isValidLeaseType(v: string): v is keyof typeof LEASE_PRICES {
+  return isValidLeaseTypeLocked(v);
 }
 
 export function amountForLease(leaseType: string): number {
-  const e = LEASE_PRICES[leaseType as LeaseType];
-  if(!e) throw new Error("Invalid leaseType");
-  return e.paise;
+  return amountForLeaseLocked(leaseType);
+}
+
+export { isPaidLeaseType };
+
+/**
+ * Single commercial access rule for Acquisition OS (one product, no tiers):
+ * - TRIAL with unexpired trialExpiresAt -> access
+ * - ACTIVE with unexpired expiresAt (or null expiry treated as active) -> access
+ * - Everything else (NONE, TRIAL_EXPIRED, EXPIRED, CANCELLED, REFUNDED,
+ *   expired timestamps) -> no access.
+ *
+ * Expired tenants stay able to sign in and open /billing to extend;
+ * feature routes must call requireCommercialAccess().
+ */
+export function hasCommercialAccess(ent: any): boolean {
+  if (!ent) return false;
+  const now = new Date();
+  if (ent.status === "TRIAL") {
+    if (!ent.trialExpiresAt) return false;
+    return new Date(ent.trialExpiresAt) >= now;
+  }
+  if (ent.status === "ACTIVE") {
+    if (ent.expiresAt && new Date(ent.expiresAt) < now) return false;
+    return true;
+  }
+  return false;
 }
 
 export async function getEntitlement(tenantId: string) {
@@ -41,8 +64,13 @@ export async function getEntitlement(tenantId: string) {
 }
 
 export async function requireActiveEntitlement(tenantId: string) {
+  return requireCommercialAccess(tenantId);
+}
+
+/** Enforced gate for paid Acquisition OS features. Allows valid TRIAL or ACTIVE. */
+export async function requireCommercialAccess(tenantId: string) {
   const e = await getEntitlement(tenantId);
-  if(!e || e.status !== "ACTIVE" || (e.expiresAt && new Date(e.expiresAt) < new Date())) {
+  if (!hasCommercialAccess(e)) {
     const err: any = new Error("ENTITLEMENT_REQUIRED");
     err.status = 402;
     throw err;

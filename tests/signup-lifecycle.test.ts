@@ -217,7 +217,7 @@ describe("landing header — single Sign In CTA (bug #1 guardrail)", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const src = readFileSync(join(here, "..", "components", "navigation.tsx"), "utf8");
     // The cyan button:
-    const buttons = src.match(/<Button href="\/login">Sign in →<\/Button>/g) ?? [];
+    const buttons = src.match(/<Button href="\/login">Sign in<\/Button>/g) ?? [];
     expect(buttons).toHaveLength(1);
     // No plain-text sign-in link may remain:
     expect(src).not.toMatch(/<Link href="\/login"[^>]*>\s*Sign in\s*<\/Link>/);

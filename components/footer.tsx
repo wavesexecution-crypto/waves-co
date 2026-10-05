@@ -11,17 +11,14 @@ export function Footer() {
           <div className="flex flex-col gap-6">
             <div>
               <span className="font-heading text-2xl font-bold tracking-[0.12em] uppercase text-navy">
-                Wavesco
-              </span>
-              <span className="ml-3 font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
-                Systems Architecture
+                WAVES
               </span>
             </div>
             <h2 className="font-heading text-[28px] font-semibold leading-tight text-navy sm:text-[32px] max-w-md">
-              Build the company that can run without waiting for you.
+              Your business. Made easier.
             </h2>
             <p className="max-w-md text-sm leading-relaxed text-body">
-              We design and install operating systems for founder-led companies with real teams, real revenue, and operations ready for engineered autonomy.
+              WAVES handles the work behind your business, from finding customers to running day-to-day operations.
             </p>
           </div>
 
@@ -31,14 +28,14 @@ export function Footer() {
               Navigation
             </span>
             <nav className="flex flex-col gap-4 text-sm font-medium text-body">
-              <Link className="transition-colors duration-200 hover:text-navy" href="/#process">
-                Process Flow
+              <Link className="transition-colors duration-200 hover:text-navy" href="/#audit-cycle">
+                Product
               </Link>
               <Link className="transition-colors duration-200 hover:text-navy" href="/case-study">
                 Case Study
               </Link>
               <Link className="transition-colors duration-200 hover:text-navy" href="/architecture-audit">
-                Architecture Audit
+                Start with WAVES
               </Link>
             </nav>
           </div>
@@ -49,10 +46,10 @@ export function Footer() {
               Get Started
             </span>
             <p className="text-sm leading-relaxed text-body">
-              Book a confidential intake review to find what still depends on you.
+              Book a confidential intake review to see how WAVES works for your business.
             </p>
             <Button href="/architecture-audit" className="w-full sm:w-auto">
-              Book Architecture Review
+              Start with WAVES
             </Button>
           </div>
         </div>
@@ -60,7 +57,7 @@ export function Footer() {
         {/* Footer Bottom */}
         <div className="mt-16 border-t border-line/60 pt-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
-            © 2023 Wavesco. All rights reserved.
+            © 2024 WAVES. All rights reserved.
           </p>
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
             Confidential intake // Secure submission

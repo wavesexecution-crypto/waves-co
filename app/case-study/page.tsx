@@ -10,14 +10,14 @@ import { siteConfig } from "@/app/site";
 export const metadata: Metadata = {
   title: "Case Study",
   description:
-    "How Wavesco helped a founder-led services company move daily approvals into a clearer operating system.",
+    "How a founder-led business moved daily operations into WAVES and got time back.",
   alternates: {
     canonical: "/case-study",
   },
   openGraph: {
-    title: "Wavesco Case Study",
+    title: "WAVES Case Study",
     description:
-      "From daily founder approvals to a company with operating rhythm.",
+      "From daily founder involvement to a business that runs without them.",
     url: `${siteConfig.url}/case-study`,
   },
 };
@@ -30,10 +30,10 @@ const companyMetadata = [
 ];
 
 const weeks = [
-  ["Week 1: Diagnosis & Node Mapping", "Mapped all decision bottlenecks, client exceptions, field schedules, and communication loops."],
-  ["Week 2: Autonomy & Escalation Architecture", "Established role boundaries, decision matrices, quality thresholds, and escalation pathways."],
-  ["Week 3: Governance & Operating Cadence", "Deployed scorecards, structural manager loops, meeting cadences, and system tracking."],
-  ["Week 4: Transfer of Control", "Delegated core operating logic to team leads, reducing founder intervention to true exceptions."],
+  ["Week 1: Diagnosis", "Mapped all decision bottlenecks, client exceptions, schedules, and communication loops."],
+  ["Week 2: System Design", "Established role boundaries, decision rights, quality thresholds, and escalation paths."],
+  ["Week 3: Deployment", "Deployed scorecards, manager loops, meeting cadences, and system tracking."],
+  ["Week 4: Handoff", "Transferred core operating logic to team leads, reducing founder intervention to true exceptions."],
 ];
 
 export default function CaseStudyPage() {
@@ -43,27 +43,24 @@ export default function CaseStudyPage() {
       <section className="border-b border-line bg-paper">
         <Container className="py-24 sm:py-32">
           <Reveal>
-            {/* Classification details */}
             <div className="flex flex-wrap gap-4 items-center justify-between border-b border-line/60 pb-6 mb-8 font-mono text-[10px] uppercase tracking-widest text-muted">
               <div>CLIENT OPERATIONS CASE STUDY</div>
               <div>FILE REF: WAVES-CS-084</div>
             </div>
-            
+
             <Badge>System Report</Badge>
             <h1 className="mt-8 max-w-5xl font-heading text-[40px] font-semibold leading-[1.1] tracking-[-0.02em] text-navy sm:text-[56px]">
-              From daily founder approvals to a company with operating rhythm.
+              From daily founder involvement to a business that runs without them.
             </h1>
             <p className="mt-8 max-w-3xl text-lg leading-[1.6] text-body">
-              A founder-led commercial services company had a simple problem:
-              routine work still waited for the owner. We rebuilt how decisions,
-              handoffs, and reviews moved through the team.
+              A founder-led commercial services company had a simple problem: routine work still waited for the owner. We rebuilt how decisions, handoffs, and reviews moved through the team using WAVES ONE.
             </p>
           </Reveal>
 
           {/* Meta Data Box */}
           <Reveal className="premium-card mt-16 rounded-sm p-8">
             <div className="mb-4 font-mono text-[10px] uppercase tracking-wider text-navy font-semibold">
-              Before the engagement:
+              Before WAVES:
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {companyMetadata.map(([label, value]) => (
@@ -89,41 +86,36 @@ export default function CaseStudyPage() {
               1.0 // Diagnosis
             </span>
             <h2 className="font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
-              Growth increased demand, but control remained centralized in one node.
+              Growth increased demand, but control remained centralized in one person.
             </h2>
           </Reveal>
           <Reveal className="grid gap-6 text-lg leading-[1.6] text-body">
             <p>
-              The founder handled routine approvals, schedule changes, billing
-              exceptions, quality checks, and client issues. None of those
-              choices were hard on their own. Together, they created a queue.
+              The founder handled routine approvals, schedule changes, billing exceptions, quality checks, and client issues. None of those choices were hard on their own. Together, they created a queue.
             </p>
             <p>
-              Managers had responsibility, but not clear authority. Procedures
-              were still unwritten, so the team kept checking with the founder.
-              Growth multiplied the requests sent to one desk.
+              Managers had responsibility, but not clear authority. Procedures were still unwritten, so the team kept checking with the founder. Growth multiplied the requests sent to one desk.
             </p>
             <p>
-              The business did not need more software. It needed clear operating
-              rules, stronger handoffs, and decision rights the team could use.
+              The business did not need more software. It needed a system that runs the work — clear operating rules, stronger handoffs, and decision rights the team could use.
             </p>
           </Reveal>
         </div>
       </Section>
 
-      {/* 2.0 Architectural Redesign */}
+      {/* 2.0 System Design */}
       <Section className="border-b border-line bg-paper/30 py-24 sm:py-32">
         <div className="mb-16 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <Reveal className="max-w-2xl">
             <span className="font-mono text-xs uppercase tracking-widest text-accent font-semibold block mb-4">
-              2.0 // Systems Architecture
+              2.0 // System Design
             </span>
             <h2 className="font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
-              Moving decisions out of the founder's head and into the company.
+              Moving decisions out of the founder's head and into the system.
             </h2>
           </Reveal>
           <Reveal className="font-mono text-[10px] text-muted text-right hidden md:block">
-            OPERATING MODEL // SYS.DWG.084
+            WAVES ONE // SYS.DWG.084
           </Reveal>
         </div>
 
@@ -145,11 +137,10 @@ export default function CaseStudyPage() {
               3.0 // Implementation
             </span>
             <h2 className="font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
-              A 4-week deployment window inside the live operation.
+              A 4-week deployment inside the live operation.
             </h2>
             <p className="mt-6 text-lg leading-[1.6] text-body">
-              Systems are proven in the real business, not in a slide deck. We
-              installed each change with the team while work kept moving.
+              Systems are proven in the real business, not in a slide deck. We installed each change with the team while work kept moving.
             </p>
           </Reveal>
           <div className="grid gap-4">
@@ -181,7 +172,7 @@ export default function CaseStudyPage() {
           <Statistic value="18 hrs" label="Founder working hours recovered per week." />
           <Statistic value="41%" label="Reduction in preventable operational errors." />
           <Statistic value="3.2x" label="Increase in standard decision turnaround speed." />
-          <Statistic value="82 -> 29" label="Founder dependency index reduction." />
+          <Statistic value="82 → 29" label="Founder dependency index reduction." />
         </Reveal>
       </Section>
 
@@ -190,7 +181,7 @@ export default function CaseStudyPage() {
         <Container className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <span className="font-mono text-[10px] uppercase tracking-widest text-accent block mb-4">
-              Architecture Review
+              Start with WAVES
             </span>
             <h2 className="max-w-3xl font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] sm:text-[40px]">
               Find what still depends on you.

@@ -42,9 +42,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             {ent?.startedAt && <div className="text-sm"><span className="text-muted">Started:</span> {new Date(ent.startedAt).toLocaleDateString()}</div>}
             {ent?.expiresAt && <div className="text-sm"><span className="text-muted">Expires:</span> {new Date(ent.expiresAt).toLocaleDateString()}</div>}
             {ent?.pricePaise ? <div className="text-sm"><span className="text-muted">Value:</span> {inr(ent.pricePaise)}</div> : null}
-            <div className="mt-6 flex gap-3">
+            <div className="mt-6">
               <Link href="/#lease" className="inline-flex h-10 items-center justify-center rounded-sm bg-navy px-5 text-sm font-medium text-white">Extend Lease</Link>
-              <Link href="/api/billing/entitlement" className="inline-flex h-10 items-center justify-center rounded-sm border border-line bg-white px-5 text-sm font-medium text-navy">View JSON</Link>
             </div>
           </div>
           <div className="rounded-sm border border-line bg-paper p-6">

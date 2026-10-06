@@ -1,112 +1,41 @@
 import { auth } from "@/lib/auth";
 import { getEntitlement, hasCommercialAccess } from "@/lib/billing";
+import { withTenantContext } from "@/lib/context";
+import { requireCommercialAccess } from "@/lib/billing";
 import Link from "next/link";
 import { Button } from "@/components/button";
-import { Container, Section } from "@/components/container";
+import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
+import { FollowUpButton } from "./reply-actions";
 
 export const dynamic = "force-dynamic";
 
-interface Reply {
+interface StoredReply {
   id: string;
-  from: { name: string; role: string; company: string; email: string };
+  leadKey: string;
+  business: string;
+  email: string;
   subject: string;
   body: string;
-  receivedAt: string;
-  category: "interested" | "not-interested" | "follow-up" | "other";
-  hasReplied: boolean;
+  replyStatus: string | null;
+  updatedAt: Date;
 }
 
-const mockReplies: Reply[] = [
-  {
-    id: "1",
-    from: { name: "Sarah Chen", role: "VP Marketing", company: "Acme Corp", email: "sarah@acme.com" },
-    subject: "Re: Ideas for Acme's Q2 marketing push",
-    body: `Hi there,
+const CATEGORIES = ["all", "interested", "not-interested", "follow-up", "other"] as const;
 
-Thanks for reaching out. This is actually timely — we're finalizing our Q2 plan next week and I'm looking at a few options.
+function categoryOf(replyStatus: string | null): string {
+  const s = (replyStatus ?? "").toLowerCase().replace(/_/g, "-");
+  if (s.includes("interest") && !s.includes("not")) return "interested";
+  if (s.includes("not-interest") || s.includes("not-interested")) return "not-interested";
+  if (s.includes("follow")) return "follow-up";
+  return "other";
+}
 
-Could you send me a brief overview of how you've helped other Series B companies? Particularly interested in the "40% waste" metric you mentioned.
-
-Best,
-Sarah`,
-    receivedAt: "2026-10-05T10:30:00Z",
-    category: "interested",
-    hasReplied: false,
-  },
-  {
-    id: "2",
-    from: { name: "Marcus Johnson", role: "CTO", company: "TechStart Inc", email: "marcus@techstart.io" },
-    subject: "Re: Technical debt at TechStart?",
-    body: `Interesting angle. We've tried a few static analysis tools but they just create noise.
-
-What makes your approach different? Happy to hop on a quick call if you have a demo.
-
--Marcus`,
-    receivedAt: "2026-10-05T09:15:00Z",
-    category: "interested",
-    hasReplied: false,
-  },
-  {
-    id: "3",
-    from: { name: "Emily Rodriguez", role: "Head of Operations", company: "GlobalLogistics", email: "emily@globallogistics.com" },
-    subject: "Re: Q2 expansion planning",
-    body: `Thanks but we're already working with a vendor for this transition. Not looking to add more partners right now.
-
-Best,
-Emily`,
-    receivedAt: "2026-10-04T16:45:00Z",
-    category: "not-interested",
-    hasReplied: false,
-  },
-  {
-    id: "4",
-    from: { name: "David Park", role: "VP Finance", company: "FinanceFlow", email: "david@financeflow.com" },
-    subject: "Re: Automating FinanceFlow's reconciliation",
-    body: `15 hours/week sounds about right for our team. What's the implementation timeline and cost structure?
-
-Also, does it integrate with NetSuite?
-
-Thanks,
-David`,
-    receivedAt: "2026-10-04T14:20:00Z",
-    category: "interested",
-    hasReplied: false,
-  },
-  {
-    id: "5",
-    from: { name: "Lisa Wang", role: "CMO", company: "EduTech Solutions", email: "lisa@edtechsolutions.com" },
-    subject: "Re: New product launch support",
-    body: `Appreciate the note. We have an internal team handling launch. Will keep you in mind for future campaigns.
-
-Regards,
-Lisa`,
-    receivedAt: "2026-10-03T11:00:00Z",
-    category: "not-interested",
-    hasReplied: false,
-  },
-  {
-    id: "6",
-    from: { name: "James Miller", role: "CTO", company: "HealthFirst", email: "james@healthfirst.org" },
-    subject: "Re: Legacy system migration",
-    body: `Not interested. We're handling this internally.
-
-Please remove from your list.`,
-    receivedAt: "2026-10-03T08:30:00Z",
-    category: "not-interested",
-    hasReplied: false,
-  },
-];
-
-const categories = [
-  { id: "all", label: "All", count: mockReplies.length },
-  { id: "interested", label: "Interested", count: mockReplies.filter(r => r.category === "interested").length },
-  { id: "not-interested", label: "Not interested", count: mockReplies.filter(r => r.category === "not-interested").length },
-  { id: "follow-up", label: "Follow up", count: mockReplies.filter(r => r.category === "follow-up").length },
-  { id: "other", label: "Other", count: mockReplies.filter(r => r.category === "other").length },
-] as const;
-
-export default async function RepliesPage() {
+export default async function RepliesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
   const session = await auth();
   const user = session?.user;
   const tenantId = user?.tenantId as string | undefined;
@@ -141,6 +70,30 @@ export default async function RepliesPage() {
     );
   }
 
+  const sp = await searchParams;
+  const rawCat = (sp.category ?? "all").toLowerCase();
+  const category = (CATEGORIES as readonly string[]).includes(rawCat) ? rawCat : "all";
+
+  let replies: StoredReply[] = [];
+  let loadError: string | null = null;
+  try {
+    await requireCommercialAccess(tenantId);
+    replies = await withTenantContext(tenantId, async (tx: any) =>
+      tx.outreachEmail.findMany({
+        where: { tenantId, replyStatus: { not: null } },
+        orderBy: { updatedAt: "desc" },
+        take: 100,
+        select: { id: true, leadKey: true, business: true, email: true, subject: true, body: true, replyStatus: true, updatedAt: true },
+      }),
+    );
+  } catch (e: any) {
+    loadError = (e as any)?.status === 402 ? "Your proof or lease expired." : "Could not load replies. Please refresh to retry.";
+  }
+
+  const counts: Record<string, number> = { all: replies.length, interested: 0, "not-interested": 0, "follow-up": 0, other: 0 };
+  for (const r of replies) counts[categoryOf(r.replyStatus)] = (counts[categoryOf(r.replyStatus)] ?? 0) + 1;
+  const visible = category === "all" ? replies : replies.filter((r) => categoryOf(r.replyStatus) === category);
+
   return (
     <Container className="py-8">
       {/* Header */}
@@ -152,7 +105,7 @@ export default async function RepliesPage() {
               Your inbox
             </h1>
             <p className="mt-2 text-sm text-body">
-              {categories[1].count} interested • {categories[2].count} not interested
+              {counts.interested} interested • {counts["not-interested"]} not interested
             </p>
           </div>
           <div className="flex gap-3">
@@ -169,59 +122,63 @@ export default async function RepliesPage() {
       {/* Category Tabs */}
       <Reveal delay={0.05} className="mb-6">
         <div className="flex flex-wrap gap-2 bg-paper/50 rounded-lg p-1" role="tablist">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
+          {CATEGORIES.map((cat) => (
+            <Link
+              key={cat}
               role="tab"
-              aria-selected={cat.id === "all"}
+              aria-selected={cat === category}
+              href={cat === "all" ? "/acquisition/replies" : `/acquisition/replies?category=${cat}`}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                cat.id === "all"
-                  ? "bg-white text-navy"
-                  : "text-muted hover:text-body"
+                cat === category ? "bg-white text-navy" : "text-muted hover:text-body"
               }`}
             >
-              {cat.label} <span className="ml-1 font-mono text-[10px] text-muted">({cat.count})</span>
-            </button>
+              {cat === "all" ? "All" : cat === "not-interested" ? "Not interested" : cat === "follow-up" ? "Follow up" : cat[0].toUpperCase() + cat.slice(1)}{" "}
+              <span className="ml-1 font-mono text-[10px] text-muted">({counts[cat] ?? 0})</span>
+            </Link>
           ))}
         </div>
       </Reveal>
 
       {/* Reply List */}
       <Reveal delay={0.1}>
-        <div className="space-y-3">
-          {mockReplies.map((reply) => (
-            <ReplyCard key={reply.id} reply={reply} />
-          ))}
-        </div>
-      </Reveal>
-
-      {/* Empty State */}
-      <Reveal delay={0.15} className="mt-8 hidden">
-        <div className="rounded-lg border border-line bg-white p-12 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/20">
-            <MailIcon className="h-8 w-8 text-muted" />
+        {loadError ? (
+          <div className="rounded-lg border border-line bg-white p-12 text-center">
+            <p className="text-sm text-body">{loadError}</p>
           </div>
-          <h3 className="font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy">
-            No replies yet
-          </h3>
-          <p className="mt-2 text-sm text-body">
-            Replies will appear here when prospects respond to your outreach.
-          </p>
-        </div>
+        ) : visible.length === 0 ? (
+          <div className="rounded-lg border border-line bg-white p-12 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/20">
+              <MailIcon className="h-8 w-8 text-muted" />
+            </div>
+            <h3 className="font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy">
+              No replies yet
+            </h3>
+            <p className="mt-2 text-sm text-body">
+              Replies will appear here when prospects respond to your outreach. Nothing is shown until a real reply is recorded.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {visible.map((reply) => (
+              <ReplyCard key={reply.id} reply={reply} />
+            ))}
+          </div>
+        )}
       </Reveal>
     </Container>
   );
 }
 
-function ReplyCard({ reply }: { reply: Reply }) {
+function ReplyCard({ reply }: { reply: StoredReply }) {
+  const cat = categoryOf(reply.replyStatus);
   const categoryColors: Record<string, { dot: string; badge: string; label: string }> = {
     interested: { dot: "bg-success", badge: "bg-success/10 text-success", label: "Interested" },
     "not-interested": { dot: "bg-error", badge: "bg-error/10 text-error", label: "Not interested" },
     "follow-up": { dot: "bg-accent", badge: "bg-accent/10 text-accent", label: "Follow up" },
-    other: { dot: "bg-muted", badge: "bg-muted/50 text-muted", label: "Other" },
+    other: { dot: "bg-muted", badge: "bg-muted/50 text-muted", label: reply.replyStatus ?? "Reply" },
   };
 
-  const colors = categoryColors[reply.category] || categoryColors.other;
+  const colors = categoryColors[cat] || categoryColors.other;
 
   return (
     <div className="rounded-lg border border-line bg-white p-5 hover:border-accent/50 transition-colors">
@@ -231,8 +188,8 @@ function ReplyCard({ reply }: { reply: Reply }) {
             <div className="flex items-center gap-3">
               <div className={`h-2 w-2 rounded-full ${colors.dot}`} />
               <div>
-                <p className="font-medium text-navy">{reply.from.name}</p>
-                <p className="text-sm text-muted">{reply.from.role} @ {reply.from.company}</p>
+                <p className="font-medium text-navy">{reply.business}</p>
+                <p className="text-sm text-muted">{reply.email}</p>
               </div>
             </div>
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors.badge}`}>
@@ -246,66 +203,19 @@ function ReplyCard({ reply }: { reply: Reply }) {
             {reply.body}
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] text-muted">
-              {new Date(reply.receivedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-            </span>
-            <div className="flex items-center gap-2">
-              {!reply.hasReplied && (
-                <Button size="sm" onClick={() => replyTo(reply.id)}>
-                  Reply
-                </Button>
-              )}
-              {reply.hasReplied && (
-                <span className="px-2 py-1 rounded bg-success/10 text-success text-xs font-medium">Replied</span>
-              )}
-              <Button variant="ghost" size="sm" onClick={() => markNotInterested(reply.id)}>
-                Not interested
-              </Button>
-            </div>
-          </div>
+          <span className="font-mono text-[10px] text-muted">
+            {new Date(reply.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+          </span>
         </div>
 
         <div className="lg:ml-8 flex flex-col gap-2">
-          {!reply.hasReplied && (
-            <Button className="w-full" onClick={() => replyTo(reply.id)}>
-              <MailIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-              Reply
-            </Button>
-          )}
-          <Button variant="secondary" className="w-full" onClick={() => scheduleFollowUp(reply.id)}>
-            Follow up
-          </Button>
-          <Button variant="ghost" className="w-full" onClick={() => viewDetails(reply.id)}>
-            View details
-          </Button>
+          <FollowUpButton leadKey={reply.leadKey} business={reply.business} />
         </div>
       </div>
     </div>
   );
 }
 
-function replyTo(id: string) {
-  console.log("Reply to:", id);
-  // TODO: Open reply composer
-}
-
-function markNotInterested(id: string) {
-  console.log("Mark not interested:", id);
-  // TODO: Call API
-}
-
-function scheduleFollowUp(id: string) {
-  console.log("Schedule follow-up:", id);
-  // TODO: Open follow-up scheduler
-}
-
-function viewDetails(id: string) {
-  console.log("View details:", id);
-  // TODO: Open detail modal
-}
-
-// Icons
 function MailIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

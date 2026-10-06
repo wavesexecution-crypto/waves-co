@@ -1,11 +1,18 @@
 import { auth } from "@/lib/auth";
 import { getEntitlement, hasCommercialAccess } from "@/lib/billing";
+import { fetchTenantStats } from "@/lib/acquisition";
 import Link from "next/link";
 import { Button } from "@/components/button";
 import { Container, Section } from "@/components/container";
 import { Reveal } from "@/components/reveal";
+import { PrintButton } from "./print-button";
 
 export const dynamic = "force-dynamic";
+
+function pct(num: number, den: number): string {
+  if (!Number.isFinite(num) || !Number.isFinite(den) || den <= 0) return "0";
+  return ((num / den) * 100).toFixed(1);
+}
 
 export default async function ResultsPage() {
   const session = await auth();
@@ -42,19 +49,48 @@ export default async function ResultsPage() {
     );
   }
 
-  // Mock data - replace with real data from database
+  // Real counts from stored rows — never constants. Zeros are honest for
+  // new workspaces; every figure below derives from these counts.
+  let stats = null as null | Awaited<ReturnType<typeof fetchTenantStats>>;
+  let loadError: string | null = null;
+  if (tenantId) {
+    try {
+      stats = await fetchTenantStats(tenantId);
+    } catch {
+      loadError = "Could not load your report. Please refresh to retry.";
+    }
+  }
+  if (loadError || !stats) {
+    return (
+      <Container className="py-20 text-center">
+        <Reveal>
+          <div className="mx-auto max-w-xl">
+            <h1 className="font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
+              Report unavailable
+            </h1>
+            <p className="mt-4 text-lg leading-[1.6] text-body">{loadError ?? "Sign in to view your report."}</p>
+            <Button href="/acquisition/results" className="mt-8 w-full sm:w-auto" size="lg">
+              Retry
+            </Button>
+          </div>
+        </Reveal>
+      </Container>
+    );
+  }
+
   const results = {
-    period: "Last 30 days",
-    peopleContacted: 143,
-    replies: 11,
-    interested: 4,
-    meetingsBooked: 2,
-    pipelineValue: 240000,
-    dealsClosed: 0,
+    period: "All time",
+    prospects: stats.leadsTotal,
+    awaitingDecision: stats.leadsReady,
+    peopleContacted: stats.emailsSent,
+    failedSends: stats.emailsFailed,
+    replies: stats.replies,
+    interested: stats.interested,
+    followUpsPending: stats.followUpsPending,
   };
 
-  const conversionRate = results.replies > 0 ? ((results.interested / results.replies) * 100).toFixed(1) : "0";
-  const replyRate = results.peopleContacted > 0 ? ((results.replies / results.peopleContacted) * 100).toFixed(1) : "0";
+  const conversionRate = pct(results.interested, results.replies);
+  const replyRate = pct(results.replies, results.peopleContacted);
 
   return (
     <Container className="py-8">
@@ -74,7 +110,7 @@ export default async function ResultsPage() {
             <Link href="/acquisition/replies">
               <Button variant="secondary">← Replies</Button>
             </Link>
-            <Button variant="secondary">Download PDF</Button>
+            <PrintButton />
           </div>
         </div>
       </Reveal>
@@ -83,27 +119,27 @@ export default async function ResultsPage() {
       <Reveal delay={0.05} className="mb-12">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <BigNumberCard
+            label="Prospects added"
+            value={results.prospects.toLocaleString()}
+            description={`${results.awaitingDecision} awaiting decision`}
+            icon={<UsersIcon />}
+          />
+          <BigNumberCard
             label="People contacted"
             value={results.peopleContacted.toLocaleString()}
-            description={`${replyRate}% replied`}
-            icon={<UsersIcon />}
+            description={results.failedSends > 0 ? `${results.failedSends} failed to send` : `${replyRate}% replied`}
+            icon={<ReplyIcon />}
           />
           <BigNumberCard
             label="Replies received"
             value={results.replies.toLocaleString()}
             description={`${conversionRate}% showed interest`}
-            icon={<ReplyIcon />}
-          />
-          <BigNumberCard
-            label="Interested prospects"
-            value={results.interested.toLocaleString()}
-            description={`${results.meetingsBooked} meetings booked`}
             icon={<HeartIcon />}
           />
           <BigNumberCard
-            label="Pipeline value"
-            value={`$${(results.pipelineValue / 1000).toFixed(0)}k`}
-            description={`${results.dealsClosed} deals closed`}
+            label="Follow-ups pending"
+            value={results.followUpsPending.toLocaleString()}
+            description={`${results.interested} interested prospects`}
             icon={<DollarIcon />}
           />
         </div>
@@ -118,33 +154,28 @@ export default async function ResultsPage() {
           <div className="space-y-4">
             <PlainEnglishRow
               icon={<CheckCircleIcon />}
-              title="Acquisition OS found 143 companies matching your ideal customer"
-              detail="Researched across your target industries, company sizes, and locations"
+              title={`${results.prospects} prospects in your workspace (${results.awaitingDecision} awaiting decision)`}
+              detail="Only prospects you added are counted — nothing here is fabricated"
             />
             <PlainEnglishRow
               icon={<MailIcon />}
-              title="Sent personalized emails to all 143 prospects"
-              detail="Each email referenced their specific situation — funding, hiring, public comments"
+              title={`Sent personalized emails to ${results.peopleContacted} prospects`}
+              detail={results.failedSends > 0 ? `${results.failedSends} sends failed and are recorded as failures` : "Each send happens only after your approval"}
             />
             <PlainEnglishRow
               icon={<ReplyIcon />}
-              title="11 people replied (7.7% reply rate)"
-              detail="Above the 3-5% industry average for cold outreach"
+              title={`${results.replies} people replied (${replyRate}% reply rate)`}
+              detail="Replies appear here when prospects respond"
             />
             <PlainEnglishRow
               icon={<HeartIcon />}
-              title="4 showed genuine interest"
-              detail="Asked for more info, requested a call, or asked specific questions"
+              title={`${results.interested} showed genuine interest`}
+              detail="Follow up with interested prospects from your inbox"
             />
             <PlainEnglishRow
               icon={<CalendarIcon />}
-              title="2 meetings booked"
-              detail="Both with decision-makers (VP Marketing, CTO)"
-            />
-            <PlainEnglishRow
-              icon={<DollarIcon />}
-              title="$240k pipeline generated"
-              detail="Based on average deal size for your target segment"
+              title={`${results.followUpsPending} follow-ups pending`}
+              detail="Scheduled follow-ups waiting for their due date"
             />
           </div>
         </Section>
@@ -158,10 +189,10 @@ export default async function ResultsPage() {
           </h2>
           <FunnelVisualization
             steps={[
-              { label: "Contacted", value: results.peopleContacted, color: "bg-navy" },
+              { label: "Prospects", value: results.prospects, color: "bg-navy" },
+              { label: "Contacted", value: results.peopleContacted, color: "bg-accent" },
               { label: "Replied", value: results.replies, color: "bg-accent" },
               { label: "Interested", value: results.interested, color: "bg-success" },
-              { label: "Meetings", value: results.meetingsBooked, color: "bg-accent" },
             ]}
           />
         </Section>
@@ -185,12 +216,12 @@ export default async function ResultsPage() {
                 <p className="font-semibold text-navy">{conversionRate}%</p>
               </div>
               <div>
-                <p className="text-muted">Meeting rate</p>
-                <p className="font-semibold text-navy">{(results.meetingsBooked / results.peopleContacted * 100).toFixed(2)}%</p>
+                <p className="text-muted">Failed sends</p>
+                <p className="font-semibold text-navy">{results.failedSends}</p>
               </div>
               <div>
-                <p className="text-muted">Avg. deal size</p>
-                <p className="font-semibold text-navy">$${(results.pipelineValue / results.meetingsBooked / 1000).toFixed(0)}k</p>
+                <p className="text-muted">Awaiting decision</p>
+                <p className="font-semibold text-navy">{results.awaitingDecision}</p>
               </div>
             </div>
           </details>
@@ -207,7 +238,7 @@ export default async function ResultsPage() {
             <Link href="/acquisition/replies">
               <div className="rounded-lg border border-line p-5 hover:border-accent transition-colors">
                 <p className="font-medium text-navy">Reply to interested prospects</p>
-                <p className="mt-1 text-sm text-muted">4 people are waiting for your response</p>
+                <p className="mt-1 text-sm text-muted">{results.interested} waiting for your response</p>
               </div>
             </Link>
             <Link href="/acquisition/outreach">
@@ -261,12 +292,12 @@ function PlainEnglishRow({ icon, title, detail }: { icon: React.ReactNode; title
 }
 
 function FunnelVisualization({ steps }: { steps: Array<{ label: string; value: number; color: string }> }) {
-  const maxValue = Math.max(...steps.map(s => s.value));
+  const maxValue = Math.max(0, ...steps.map(s => (Number.isFinite(s.value) ? s.value : 0)));
 
   return (
     <div className="space-y-3">
       {steps.map((step, index) => {
-        const width = (step.value / maxValue) * 100;
+        const width = maxValue > 0 ? (step.value / maxValue) * 100 : 0;
         return (
           <div key={step.label} className="relative">
             <div className="flex items-center gap-4">

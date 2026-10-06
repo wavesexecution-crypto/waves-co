@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/button";
 import { Container, Section } from "@/components/container";
 import { Reveal } from "@/components/reveal";
+import { TrialStartButton } from "./lease-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -126,11 +127,13 @@ export default async function BillingPage() {
                 )}
               </div>
             </div>
-            {tenantId && (
-              <Button href="/acquisition/billing" className="w-full sm:w-auto" size="lg">
-                {accessStatus === "active" || accessStatus === "trial" ? "Extend lease" : "Get access"}
+            {tenantId && (accessStatus === "active" || accessStatus === "trial" ? (
+              <Button href="/billing" className="w-full sm:w-auto" size="lg">
+                Extend lease
               </Button>
-            )}
+            ) : (
+              <TrialStartButton label={accessStatus === "none" ? "Start 2-day proof" : "Get access"} />
+            ))}
           </div>
 
           {expiresAt && (
@@ -271,11 +274,7 @@ function LeaseCard({ option, current, disabled }: { option: { days: number; leas
       {option.savePaise > 0 && (
         <p className="text-sm text-success mb-4">Save {formatINRPaise(option.savePaise)} vs monthly</p>
       )}
-      <Button className="w-full" disabled={disabled} onClick={() => {
-        if (!disabled) {
-          window.location.href = `/login?callbackUrl=/acquisition/billing`;
-        }
-      }}>
+      <Button className="w-full" disabled={disabled || current} href={current || disabled ? undefined : "/billing"}>
         {current ? "Current lease" : `Lease for ${option.days} days`}
       </Button>
     </div>

@@ -1,87 +1,25 @@
 import { auth } from "@/lib/auth";
 import { getEntitlement, hasCommercialAccess } from "@/lib/billing";
+import { ORDER_GROUPS, fetchTenantLeads, type TenantLeadRow } from "@/lib/acquisition";
 import Link from "next/link";
 import { Button } from "@/components/button";
-import { Container, Section } from "@/components/container";
+import { Container } from "@/components/container";
 import { Reveal } from "@/components/reveal";
+import { LeadDecisionButtons, LeadImportForm } from "./lead-actions";
 
 export const dynamic = "force-dynamic";
 
-interface Lead {
-  id: string;
-  company: string;
-  person: string;
-  role: string;
-  website: string;
-  reason: string;
-  score: number;
-  status: "pending" | "approved" | "rejected";
-}
+const TABS = [
+  { id: "ready", label: "Pending" },
+  { id: "approved", label: "Approved" },
+  { id: "rejected", label: "Rejected" },
+] as const;
 
-const mockLeads: Lead[] = [
-  {
-    id: "1",
-    company: "Acme Corp",
-    person: "Sarah Chen",
-    role: "VP Marketing",
-    website: "acme.com",
-    reason: "Recently raised Series B, hiring marketing team, uses competitor tools",
-    score: 92,
-    status: "pending",
-  },
-  {
-    id: "2",
-    company: "TechStart Inc",
-    person: "Marcus Johnson",
-    role: "CTO",
-    website: "techstart.io",
-    reason: "Scaling engineering team, mentioned pain points in blog post",
-    score: 87,
-    status: "pending",
-  },
-  {
-    id: "3",
-    company: "GlobalLogistics",
-    person: "Emily Rodriguez",
-    role: "Head of Operations",
-    website: "globallogistics.com",
-    reason: "Expanding to new markets, current vendor contract ending Q2",
-    score: 81,
-    status: "pending",
-  },
-  {
-    id: "4",
-    company: "FinanceFlow",
-    person: "David Park",
-    role: "VP Finance",
-    website: "financeflow.com",
-    reason: "Manual processes causing delays, evaluating automation",
-    score: 78,
-    status: "approved",
-  },
-  {
-    id: "5",
-    company: "EduTech Solutions",
-    person: "Lisa Wang",
-    role: "CMO",
-    website: "edtechsolutions.com",
-    reason: "Budget increased 40% YoY, launching new product line",
-    score: 74,
-    status: "pending",
-  },
-  {
-    id: "6",
-    company: "HealthFirst",
-    person: "James Miller",
-    role: "CTO",
-    website: "healthfirst.org",
-    reason: "Legacy system migration, compliance requirements",
-    score: 69,
-    status: "rejected",
-  },
-];
-
-export default async function LeadsPage() {
+export default async function LeadsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; q?: string }>;
+}) {
   const session = await auth();
   const user = session?.user;
   const tenantId = user?.tenantId as string | undefined;
@@ -116,9 +54,31 @@ export default async function LeadsPage() {
     );
   }
 
-  const pendingLeads = mockLeads.filter((l) => l.status === "pending");
-  const approvedLeads = mockLeads.filter((l) => l.status === "approved");
-  const rejectedLeads = mockLeads.filter((l) => l.status === "rejected");
+  const sp = await searchParams;
+  const tab = sp.status === "approved" || sp.status === "rejected" ? sp.status : "ready";
+  const q = (sp.q ?? "").trim().slice(0, 100);
+
+  let leads: TenantLeadRow[] = [];
+  let total = 0;
+  let counts = { ready: 0, approved: 0, rejected: 0 };
+  let loadError: string | null = null;
+  try {
+    const r = await fetchTenantLeads(tenantId, { statuses: [...ORDER_GROUPS[tab]], q });
+    leads = r.leads;
+    total = r.total;
+    counts = { ready: r.counts.ready ?? 0, approved: r.counts.approved ?? 0, rejected: r.counts.rejected ?? 0 };
+  } catch {
+    loadError = "Could not load your leads. Please refresh to retry.";
+  }
+
+  const tabCount = (id: string) => (id === "ready" ? counts.ready : id === "approved" ? counts.approved : counts.rejected);
+  const qs = (extra: Record<string, string>) => {
+    const p = new URLSearchParams();
+    p.set("status", extra.status ?? tab);
+    const qq = extra.q ?? q;
+    if (qq) p.set("q", qq);
+    return `/acquisition/leads?${p.toString()}`;
+  };
 
   return (
     <Container className="py-8">
@@ -131,10 +91,11 @@ export default async function LeadsPage() {
               Review your customers
             </h1>
             <p className="mt-2 text-sm text-body">
-              {pendingLeads.length} waiting for your decision
+              {counts.ready} waiting for your decision
             </p>
           </div>
           <div className="flex gap-3">
+            <LeadImportForm />
             <Link href="/acquisition/outreach">
               <Button variant="secondary">Outreach →</Button>
             </Link>
@@ -142,83 +103,107 @@ export default async function LeadsPage() {
         </div>
       </Reveal>
 
+      {/* Search */}
+      <Reveal className="mb-6">
+        <form action="/acquisition/leads" method="get" className="flex gap-3">
+          <input type="hidden" name="status" value={tab} />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Search business, contact, email"
+            maxLength={100}
+            className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+          />
+          <Button type="submit" variant="secondary">Search</Button>
+        </form>
+      </Reveal>
+
       {/* Tabs */}
       <Reveal delay={0.05} className="mb-6">
         <div className="flex gap-1 bg-paper/50 rounded-lg p-1" role="tablist">
-          <button
-            role="tab"
-            aria-selected={true}
-            className="px-4 py-2 text-sm font-medium text-navy rounded-md bg-white"
-          >
-            Pending ({pendingLeads.length})
-          </button>
-          <button
-            role="tab"
-            aria-selected={false}
-            className="px-4 py-2 text-sm font-medium text-muted rounded-md hover:text-body transition-colors"
-          >
-            Approved ({approvedLeads.length})
-          </button>
-          <button
-            role="tab"
-            aria-selected={false}
-            className="px-4 py-2 text-sm font-medium text-muted rounded-md hover:text-body transition-colors"
-          >
-            Rejected ({rejectedLeads.length})
-          </button>
+          {TABS.map((t) => (
+            <Link
+              key={t.id}
+              role="tab"
+              aria-selected={t.id === tab}
+              href={qs({ status: t.id })}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                t.id === tab ? "text-navy bg-white" : "text-muted hover:text-body"
+              }`}
+            >
+              {t.label} ({tabCount(t.id)})
+            </Link>
+          ))}
         </div>
       </Reveal>
 
-      {/* Pending Leads */}
+      {/* List */}
       <Reveal delay={0.1}>
-        {pendingLeads.length === 0 ? (
+        {loadError ? (
+          <div className="rounded-lg border border-line bg-white p-12 text-center">
+            <h3 className="font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy">
+              Couldn&apos;t load leads
+            </h3>
+            <p className="mt-2 text-sm text-body">{loadError}</p>
+            <Button href="/acquisition/leads" variant="secondary" className="mt-6">
+              Retry
+            </Button>
+          </div>
+        ) : total === 0 && counts.ready + counts.approved + counts.rejected === 0 ? (
           <div className="rounded-lg border border-line bg-white p-12 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/20">
               <SearchIcon className="h-8 w-8 text-muted" />
             </div>
             <h3 className="font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy">
-              No leads waiting
+              No prospects yet
             </h3>
             <p className="mt-2 text-sm text-body">
-              All caught up! New leads will appear here as Acquisition OS finds them.
+              Add prospects above and they will appear here for your review. Nothing is fabricated — this list shows only what you added.
             </p>
             <Button href="/acquisition" variant="secondary" className="mt-6">
               Back to Home
             </Button>
           </div>
+        ) : leads.length === 0 ? (
+          <div className="rounded-lg border border-line bg-white p-12 text-center">
+            <h3 className="font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy">
+              Nothing here
+            </h3>
+            <p className="mt-2 text-sm text-body">
+              No leads match this view. Try another tab or search.
+            </p>
+          </div>
         ) : (
           <div className="space-y-4">
-            {pendingLeads.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} />
+            {leads.map((lead) => (
+              tab === "ready" ? <LeadCard key={lead.id} lead={lead} /> : <DecidedLeadRow key={lead.id} lead={lead} />
             ))}
           </div>
         )}
       </Reveal>
 
-      {/* Approved Leads */}
-      <Reveal delay={0.15} className="mt-12">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent mb-4">Approved</h2>
-        <div className="space-y-3">
-          {approvedLeads.map((lead) => (
-            <ApprovedLeadRow key={lead.id} lead={lead} />
-          ))}
-        </div>
-      </Reveal>
-
-      {/* Rejected Leads */}
-      <Reveal delay={0.2} className="mt-8">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted mb-4">Rejected</h2>
-        <div className="space-y-3">
-          {rejectedLeads.map((lead) => (
-            <RejectedLeadRow key={lead.id} lead={lead} />
-          ))}
-        </div>
-      </Reveal>
+      {/* Totals for other queues */}
+      {tab === "ready" && (counts.approved > 0 || counts.rejected > 0) && (
+        <Reveal delay={0.15} className="mt-12">
+          <h2 className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent mb-4">
+            Decided — {counts.approved} approved · {counts.rejected} rejected
+          </h2>
+          <div className="flex gap-3">
+            <Link href={qs({ status: "approved" })}>
+              <Button variant="secondary">View approved</Button>
+            </Link>
+            <Link href={qs({ status: "rejected" })}>
+              <Button variant="secondary">View rejected</Button>
+            </Link>
+          </div>
+        </Reveal>
+      )}
     </Container>
   );
 }
 
-function LeadCard({ lead }: { lead: Lead }) {
+function LeadCard({ lead }: { lead: TenantLeadRow }) {
   return (
     <div className="rounded-lg border border-line bg-white p-6">
       <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
@@ -226,108 +211,58 @@ function LeadCard({ lead }: { lead: Lead }) {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="font-heading text-[18px] font-semibold tracking-[-0.01em] text-navy">
-                {lead.company}
+                {lead.businessName}
               </h3>
-              <p className="mt-1 text-sm text-muted">{lead.website}</p>
+              <p className="mt-1 text-sm text-muted">{lead.email}</p>
             </div>
-            <ScoreBadge score={lead.score} />
+            <span className="px-2 py-1 rounded font-mono text-xs font-semibold bg-muted/50 text-muted">
+              {lead.status.replace(/_/g, " ")}
+            </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="px-2 py-0.5 rounded bg-navy/10 text-navy font-medium">{lead.person}</span>
-            <span className="px-2 py-0.5 rounded bg-muted/50 text-muted">{lead.role}</span>
-          </div>
+          {(lead.contactName || lead.contactRole) && (
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              {lead.contactName && <span className="px-2 py-0.5 rounded bg-navy/10 text-navy font-medium">{lead.contactName}</span>}
+              {lead.contactRole && <span className="px-2 py-0.5 rounded bg-muted/50 text-muted">{lead.contactRole}</span>}
+            </div>
+          )}
 
-          <p className="text-sm text-body">{lead.reason}</p>
+          {lead.opportunity && <p className="text-sm text-body">{lead.opportunity}</p>}
+
+          <details className="rounded-md border border-line bg-paper/50 px-4 py-3">
+            <summary className="cursor-pointer text-sm font-medium text-navy">View stored outreach draft</summary>
+            <p className="mt-2 text-sm font-medium text-navy">{lead.subject}</p>
+            <p className="mt-1 whitespace-pre-line text-sm text-body">{lead.body}</p>
+          </details>
         </div>
 
-        <div className="flex flex-col gap-3 lg:ml-8">
-          <Button className="w-full" onClick={() => approveLead(lead.id)}>
-            Approve
-          </Button>
-          <Button variant="ghost" className="w-full" onClick={() => rejectLead(lead.id)}>
-            Reject
-          </Button>
-          <Button variant="secondary" className="w-full" onClick={() => viewDetails(lead.id)}>
-            View details
-          </Button>
-        </div>
+        <LeadDecisionButtons orderId={lead.id} />
       </div>
     </div>
   );
 }
 
-function ApprovedLeadRow({ lead }: { lead: Lead }) {
+function DecidedLeadRow({ lead }: { lead: TenantLeadRow }) {
+  const approved = lead.status === "APPROVED" || lead.status === "SENT" || lead.status === "DELIVERED";
   return (
     <div className="rounded-lg border border-line bg-white p-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="h-2 w-2 rounded-full bg-success" />
+          <div className={`h-2 w-2 rounded-full ${approved ? "bg-success" : "bg-error"}`} />
           <div>
-            <p className="font-medium text-navy">{lead.company}</p>
-            <p className="text-sm text-muted">{lead.person} • {lead.role}</p>
+            <p className={`font-medium ${approved ? "text-navy" : "text-muted"}`}>{lead.businessName}</p>
+            <p className="text-sm text-muted">
+              {[lead.contactName, lead.contactRole].filter(Boolean).join(" • ") || lead.email}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-3 text-sm text-muted">
-          <ScoreBadge score={lead.score} />
-          <Button variant="ghost" size="sm" onClick={() => viewDetails(lead.id)}>
-            View
-          </Button>
+          <span className="font-mono text-xs">{lead.status.replace(/_/g, " ")}</span>
+          {lead.sentAt && <span className="font-mono text-xs">sent {new Date(lead.sentAt).toLocaleDateString()}</span>}
         </div>
       </div>
     </div>
   );
-}
-
-function RejectedLeadRow({ lead }: { lead: Lead }) {
-  return (
-    <div className="rounded-lg border border-line bg-white p-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="h-2 w-2 rounded-full bg-error" />
-          <div>
-            <p className="font-medium text-muted">{lead.company}</p>
-            <p className="text-sm text-muted">{lead.person} • {lead.role}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 text-sm text-muted">
-          <ScoreBadge score={lead.score} />
-          <Button variant="ghost" size="sm" onClick={() => viewDetails(lead.id)}>
-            View
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ScoreBadge({ score }: { score: number }) {
-  const getColor = (s: number) => {
-    if (s >= 80) return "bg-success/10 text-success";
-    if (s >= 60) return "bg-accent/10 text-accent";
-    return "bg-muted/50 text-muted";
-  };
-
-  return (
-    <span className={`px-2 py-1 rounded font-mono text-xs font-semibold ${getColor(score)}`}>
-      {score}% match
-    </span>
-  );
-}
-
-function approveLead(id: string) {
-  console.log("Approve lead:", id);
-  // TODO: Call API to approve lead
-}
-
-function rejectLead(id: string) {
-  console.log("Reject lead:", id);
-  // TODO: Call API to reject lead
-}
-
-function viewDetails(id: string) {
-  console.log("View details:", id);
-  // TODO: Open detail modal
 }
 
 // Icons

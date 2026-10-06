@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getEntitlement, hasCommercialAccess } from "@/lib/billing";
+import { fetchTenantStats } from "@/lib/acquisition";
 import { formatINRPaise } from "@/lib/leases";
 import Link from "next/link";
 import { Button } from "@/components/button";
@@ -55,14 +56,28 @@ export default async function AcquisitionHome() {
     }
   }
 
-  // Mock data for today's activity - replace with real data later
-  const todayStats = {
+  // Real counts from stored rows (zeros are honest for new workspaces).
+  let todayStats = {
     customersFound: 0,
     emailsSent: 0,
     replies: 0,
     interested: 0,
     meetings: 0,
   };
+  if (tenantId) {
+    try {
+      const s = await fetchTenantStats(tenantId);
+      todayStats = {
+        customersFound: s.leadsTotal,
+        emailsSent: s.emailsSent,
+        replies: s.replies,
+        interested: s.interested,
+        meetings: s.followUpsPending,
+      };
+    } catch {
+      // Keep honest zeros on load failure.
+    }
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -104,7 +119,7 @@ export default async function AcquisitionHome() {
           <StatCard label="Emails sent" value={todayStats.emailsSent} icon="mail" />
           <StatCard label="Replies" value={todayStats.replies} icon="reply" />
           <StatCard label="Interested" value={todayStats.interested} icon="heart" />
-          <StatCard label="Meetings" value={todayStats.meetings} icon="calendar" />
+          <StatCard label="Follow-ups pending" value={todayStats.meetings} icon="calendar" />
         </div>
       </Section>
 

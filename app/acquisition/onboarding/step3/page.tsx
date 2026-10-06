@@ -23,6 +23,7 @@ export default function OnboardingStep3() {
   const [data, setData] = useState<OnboardingData | null>(null);
   const [starting, setStarting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const businessType = localStorage.getItem("onboarding_businessType");
@@ -51,28 +52,65 @@ export default function OnboardingStep3() {
     });
   }, [router]);
 
+  const clearLocal = () => {
+    for (const k of [
+      "onboarding_businessType", "onboarding_companyName", "onboarding_website",
+      "onboarding_companySize", "onboarding_targetRoles", "onboarding_targetIndustries",
+      "onboarding_locations", "onboarding_painPoints",
+    ]) localStorage.removeItem(k);
+  };
+
   const handleStartSearch = async () => {
-    if (!data) return;
+    if (!data || starting) return;
     setStarting(true);
+    setError(null);
+    try {
+      // 1) Start the 2-day proof (409 = already used/active → continue anyway).
+      setProgress(10);
+      const trial = await fetch("/api/billing/trial/start", { method: "POST" });
+      if (!trial.ok && trial.status !== 409) {
+        const j = await trial.json().catch(() => ({}));
+        if (trial.status === 401) {
+          router.push("/login?callbackUrl=/acquisition/onboarding/step3");
+          return;
+        }
+        throw new Error((j as any)?.error ?? "Could not start your 2-day proof.");
+      }
 
-    // Simulate starting the search - in reality this would call an API
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise((r) => setTimeout(r, 100));
-      setProgress(i);
+      // 2) Persist the business context (upsert — safe to retry).
+      setProgress(55);
+      const res = await fetch("/api/acquisition/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: data.companyName,
+          website: data.website || undefined,
+          industry: data.businessType,
+          icp: {
+            companySize: data.companySize || undefined,
+            roles: data.targetRoles,
+            industries: data.targetIndustries,
+            locations: data.locations || undefined,
+            painPoints: data.painPoints || undefined,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        const first = Array.isArray((j as any)?.issues) && (j as any).issues.length > 0
+          ? String((j as any).issues[0].message)
+          : "Could not save your business context.";
+        throw new Error(res.status === 401 ? "Please sign in to continue." : first);
+      }
+
+      // 3) Done — server holds the state now; local copy can go.
+      setProgress(100);
+      clearLocal();
+      router.push("/acquisition/leads");
+    } catch (e: any) {
+      setError(e?.message ?? "Something went wrong. Please retry.");
+      setStarting(false);
     }
-
-    // Clear onboarding data
-    localStorage.removeItem("onboarding_businessType");
-    localStorage.removeItem("onboarding_companyName");
-    localStorage.removeItem("onboarding_website");
-    localStorage.removeItem("onboarding_companySize");
-    localStorage.removeItem("onboarding_targetRoles");
-    localStorage.removeItem("onboarding_targetIndustries");
-    localStorage.removeItem("onboarding_locations");
-    localStorage.removeItem("onboarding_painPoints");
-
-    // Navigate to leads page
-    router.push("/acquisition/leads");
   };
 
   if (!data) {
@@ -144,13 +182,21 @@ export default function OnboardingStep3() {
                 />
               </div>
               <p className="mt-3 font-mono text-sm text-muted">{progress}%</p>
+              {error && (
+                <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>
+              )}
             </div>
           </div>
         ) : (
+          <>
+            {error && (
+              <p role="alert" className="mb-4 text-center text-sm text-red-600">{error}</p>
+            )}
           <Button onClick={handleStartSearch} className="w-full" size="lg">
             <CheckCircle2 size={18} className="mr-2" />
             Start finding customers
           </Button>
+          </>
         )}
       </Reveal>
 

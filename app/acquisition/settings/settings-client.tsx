@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import { Button } from "@/components/button";
 import { Container, Section } from "@/components/container";
 import { Reveal } from "@/components/reveal";
@@ -11,6 +12,9 @@ interface SettingsClientProps {
   tenantId: string | undefined;
   hasAccess: boolean;
 }
+
+const ROLE_OPTIONS = ["CEO / Founder", "CTO / VP Engineering", "VP Marketing / CMO", "VP Sales / CRO", "Head of Product", "Head of Operations", "VP Finance / CFO"];
+const INDUSTRY_OPTIONS = ["Technology / Software", "Financial Services", "Healthcare / Life Sciences", "Manufacturing / Industrial", "Retail / E-commerce", "Professional Services", "Other"];
 
 export function SettingsClient({ user, tenantId, hasAccess }: SettingsClientProps) {
   if (!tenantId) {
@@ -128,46 +132,7 @@ export function SettingsClient({ user, tenantId, hasAccess }: SettingsClientProp
           <p className="text-sm text-muted mb-6">
             Update your ideal customer criteria. Changes apply to future searches.
           </p>
-          <div className="rounded-lg border border-line bg-white p-6 space-y-6">
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-navy">Company size</label>
-              <select className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy">
-                <option>1-10 employees</option>
-                <option>11-50 employees</option>
-                <option selected>51-200 employees</option>
-                <option>201-500 employees</option>
-                <option>501-1000 employees</option>
-                <option>1000+ employees</option>
-              </select>
-            </div>
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-navy">Decision maker roles</label>
-              <div className="flex flex-wrap gap-2">
-                {["CEO / Founder", "CTO / VP Engineering", "VP Marketing / CMO", "VP Sales / CRO", "Head of Product", "Head of Operations", "VP Finance / CFO"].map((role) => (
-                  <label key={role} className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-line bg-white text-sm cursor-pointer hover:border-accent">
-                    <input type="checkbox" className="rounded border-line text-accent focus:ring-accent" defaultChecked />
-                    <span>{role}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-navy">Industries</label>
-              <div className="flex flex-wrap gap-2">
-                {["Technology / Software", "Financial Services", "Healthcare / Life Sciences", "Manufacturing / Industrial", "Retail / E-commerce", "Professional Services", "Other"].map((industry) => (
-                  <label key={industry} className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-line bg-white text-sm cursor-pointer hover:border-accent">
-                    <input type="checkbox" className="rounded border-line text-accent focus:ring-accent" defaultChecked={industry === "Technology / Software"} />
-                    <span>{industry}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-navy">Locations</label>
-              <input type="text" defaultValue="US, UK, Canada" className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy" placeholder="US, UK, Canada" />
-            </div>
-            <Button>Save changes</Button>
-          </div>
+          <CustomerProfileForm />
         </Section>
       </Reveal>
 
@@ -182,10 +147,8 @@ export function SettingsClient({ user, tenantId, hasAccess }: SettingsClientProp
               These actions are irreversible. Please be certain before proceeding.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button variant="destructive" className="w-full sm:w-auto">
-                Delete all my data
-              </Button>
-              <Button variant="destructive" className="w-full sm:w-auto" onClick={() => signOut()}>
+              <EraseWorkflowDataButton />
+              <Button variant="destructive" className="w-full sm:w-auto" onClick={() => signOut({ callbackUrl: "/login" })}>
                 Sign out everywhere
               </Button>
             </div>
@@ -193,6 +156,195 @@ export function SettingsClient({ user, tenantId, hasAccess }: SettingsClientProp
         </Section>
       </Reveal>
     </Container>
+  );
+}
+
+/** Loads the stored business context, lets the customer edit ICP criteria, saves via API. */
+function CustomerProfileForm() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+  const [base, setBase] = useState<any>(null);
+  const [companySize, setCompanySize] = useState("51-200 employees");
+  const [roles, setRoles] = useState<string[]>([...ROLE_OPTIONS]);
+  const [industries, setIndustries] = useState<string[]>(["Technology / Software"]);
+  const [locations, setLocations] = useState("US, UK, Canada");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/acquisition/profile");
+        const j = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (res.ok && (j as any)?.profile) {
+          const p = (j as any).profile;
+          setBase(p);
+          const icp = p.icp ?? {};
+          if (typeof icp.companySize === "string" && icp.companySize) setCompanySize(icp.companySize);
+          if (Array.isArray(icp.roles)) setRoles(icp.roles);
+          if (Array.isArray(icp.industries)) setIndustries(icp.industries);
+          if (typeof icp.locations === "string") setLocations(icp.locations);
+        }
+      } catch {
+        // Keep defaults; save will surface any problem.
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const toggle = (list: string[], v: string, set: (x: string[]) => void) => {
+    set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  };
+
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    setOk(null);
+    try {
+      if (!base?.companyName || !base?.industry) {
+        throw new Error("Complete onboarding first so we know your company.");
+      }
+      const res = await fetch("/api/acquisition/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: base.companyName,
+          website: base.website ?? undefined,
+          industry: base.industry,
+          businessModel: base.businessModel ?? undefined,
+          icp: { companySize, roles, industries, locations: locations || undefined, painPoints: base?.icp?.painPoints ?? undefined },
+          offer: base.offer ?? undefined,
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("Please sign in again.");
+        const first = Array.isArray((j as any)?.issues) && (j as any).issues.length > 0 ? String((j as any).issues[0].message) : undefined;
+        throw new Error(first ?? (j as any)?.error ?? "Could not save. Please retry.");
+      }
+      setBase((j as any).profile);
+      setOk("Saved. Changes apply to future searches.");
+    } catch (e: any) {
+      setError(e?.message ?? "Could not save. Please retry.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-line bg-white p-6">
+        <p className="text-sm text-muted">Loading your profile…</p>
+      </div>
+    );
+  }
+
+  if (!base) {
+    return (
+      <div className="rounded-lg border border-line bg-white p-6 space-y-4">
+        <p className="text-sm text-body">No business context yet. Complete onboarding to set your target criteria.</p>
+        <Link href="/acquisition/onboarding">
+          <Button>Start onboarding</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-line bg-white p-6 space-y-6">
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-navy">Company size</label>
+        <select value={companySize} onChange={(e) => setCompanySize(e.target.value)} className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy">
+          {["1-10 employees", "11-50 employees", "51-200 employees", "201-500 employees", "501-1000 employees", "1000+ employees"].map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-navy">Decision maker roles</label>
+        <div className="flex flex-wrap gap-2">
+          {ROLE_OPTIONS.map((role) => (
+            <label key={role} className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-line bg-white text-sm cursor-pointer hover:border-accent">
+              <input type="checkbox" className="rounded border-line text-accent focus:ring-accent" checked={roles.includes(role)} onChange={() => toggle(roles, role, setRoles)} />
+              <span>{role}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-navy">Industries</label>
+        <div className="flex flex-wrap gap-2">
+          {INDUSTRY_OPTIONS.map((industry) => (
+            <label key={industry} className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-line bg-white text-sm cursor-pointer hover:border-accent">
+              <input type="checkbox" className="rounded border-line text-accent focus:ring-accent" checked={industries.includes(industry)} onChange={() => toggle(industries, industry, setIndustries)} />
+              <span>{industry}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-navy">Locations</label>
+        <input type="text" value={locations} onChange={(e) => setLocations(e.target.value)} className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy" placeholder="US, UK, Canada" />
+      </div>
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {ok && <p role="status" className="text-sm text-emerald-700">{ok}</p>}
+      <Button disabled={saving} onClick={save}>{saving ? "Saving…" : "Save changes"}</Button>
+    </div>
+  );
+}
+
+/** Typed-confirmation erase of own workflow data (identity/billing untouched). */
+function EraseWorkflowDataButton() {
+  const [confirming, setConfirming] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const erase = async () => {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/acquisition/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: "DELETE" }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(res.status === 401 ? "Please sign in again." : (j as any)?.error ?? "Could not erase data.");
+      setDone(true);
+      setConfirming(false);
+    } catch (e: any) {
+      setError(e?.message ?? "Could not erase data.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  if (done) return <p role="status" className="text-sm text-body">Workflow data erased. Your account and lease are untouched.</p>;
+
+  if (!confirming) {
+    return (
+      <Button variant="destructive" className="w-full sm:w-auto" onClick={() => { setConfirming(true); setError(null); }}>
+        Delete all my data
+      </Button>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-body">Erases prospects, outreach, replies, follow-ups and reports for your workspace. Account, sign-in and billing stay.</p>
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      <div className="flex gap-3">
+        <Button variant="destructive" disabled={pending} onClick={erase}>{pending ? "Erasing…" : "Yes, erase it"}</Button>
+        <Button variant="secondary" onClick={() => setConfirming(false)}>Keep my data</Button>
+      </div>
+    </div>
   );
 }
 
@@ -223,7 +375,3 @@ function NotificationToggle({ label, description, enabled }: { label: string; de
   );
 }
 
-function signOut() {
-  console.log("Sign out");
-  // TODO: Call signOut API
-}

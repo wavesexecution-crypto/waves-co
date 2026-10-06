@@ -3,9 +3,9 @@
 
 export const siteConfig = {
   name: "WAVES",
-  title: "Acquisition OS | WAVES",
+  title: "WAVES | Your business. Made easier.",
   description:
-    "Acquisition OS researches your market, finds and verifies prospects, scores them, and runs personalised outreach with your approval before anything sends. Lease from 30 days.",
+    "WAVES handles the work behind your business, from finding customers to running day-to-day operations.",
   url: siteUrl,
   ogImage: `${siteUrl}/og-image.png`,
 };

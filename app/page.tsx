@@ -80,7 +80,6 @@ export default function Home() {
       <section className="border-b border-line bg-paper">
         <Container className="grid min-h-[calc(100vh-4rem)] gap-8 py-24 sm:py-32 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <Reveal>
-            <Badge>WAVES ONE</Badge>
             <h1 className="mt-8 max-w-5xl font-heading text-[64px] font-semibold leading-[0.92] tracking-[-0.03em] text-navy sm:text-[80px] lg:text-[88px]">
               Your business. Made easier.
             </h1>

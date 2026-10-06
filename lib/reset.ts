@@ -72,7 +72,8 @@ export async function requestPasswordReset(
         html: `<div style="font-family: system-ui, sans-serif; padding: 24px;"><h2>Reset your password</h2><p>Click to reset: <a href="${resetUrl}">${resetUrl}</a></p><p>This link expires in 1 hour.</p></div>`,
       });
     } else {
-      console.log(`[reset] Resend not configured, reset link for ${email}: ${resetUrl}`);
+      // Never log the tokenized URL: server logs must not carry credentials.
+      console.log(`[reset] Resend not configured, reset link generated for ${email}`);
     }
   } catch (e) {
     console.error("[reset] email send failed", e);

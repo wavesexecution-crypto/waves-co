@@ -24,9 +24,13 @@ export { isPaidLeaseType };
 /**
  * Single commercial access rule for Acquisition OS (one product, no tiers):
  * - TRIAL with unexpired trialExpiresAt -> access
- * - ACTIVE with unexpired expiresAt (or null expiry treated as active) -> access
+ * - ACTIVE with present and unexpired expiresAt -> access
  * - Everything else (NONE, TRIAL_EXPIRED, EXPIRED, CANCELLED, REFUNDED,
- *   expired timestamps) -> no access.
+ *   expired or missing timestamps) -> no access.
+ *
+ * Fail-closed: an ACTIVE row without expiresAt grants nothing. The verify
+ * route always sets expiresAt, so a null expiry only occurs on corrupt or
+ * hand-edited rows, which must never confer access.
  *
  * Expired tenants stay able to sign in and open /billing to extend;
  * feature routes must call requireCommercialAccess().
@@ -39,10 +43,23 @@ export function hasCommercialAccess(ent: any): boolean {
     return new Date(ent.trialExpiresAt) >= now;
   }
   if (ent.status === "ACTIVE") {
-    if (ent.expiresAt && new Date(ent.expiresAt) < now) return false;
-    return true;
+    if (!ent.expiresAt) return false;
+    return new Date(ent.expiresAt) >= now;
   }
   return false;
+}
+
+/**
+ * Tenant-ownership check for billing orders (IDOR guard).
+ *
+ * The orders route looks orders up by globally-unique idempotencyKey /
+ * providerOrderId. A lookup hit must never be returned to a different
+ * tenant: without this check a client that replays another tenant's key
+ * would receive that tenant's order details.
+ */
+export function isOrderOwnedByTenant(order: any, tenantId: string): boolean {
+  if (!order || !tenantId) return false;
+  return order.tenantId === tenantId;
 }
 
 export async function getEntitlement(tenantId: string) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/context";
+import { isOrderOwnedByTenant } from "@/lib/billing";
 import { LEASE_PRICES, isPaidLeaseType } from "@/lib/leases";
 import { createRazorpayOrder, getRazorpayKeyId, isRazorpayConfigured } from "@/lib/razorpay";
 import { randomUUID } from "crypto";
@@ -30,9 +31,16 @@ export async function POST(req: Request) {
     }
     const idempotencyKey = body.idempotencyKey || `${tenantId}:${leaseType}:${randomUUID()}`;
     const result = await withTenantContext(tenantId, async (tx: any) => {
-      // idempotency: return existing pending order for same key
+      // idempotency: return existing pending order for same key.
+      // The key is globally unique, so ownership must be verified — a hit
+      // belonging to another tenant is rejected without leaking its details.
       const existing = await tx.acquisitionOrder.findUnique({ where: { idempotencyKey } }).catch(() => null);
-      if (existing) return { order: existing, reused: true, keyId: getRazorpayKeyId() };
+      if (existing) {
+        if (!isOrderOwnedByTenant(existing, tenantId)) {
+          return { error: "Order already exists", status: 409 };
+        }
+        return { order: existing, reused: true, keyId: getRazorpayKeyId() };
+      }
       const order = await tx.acquisitionOrder.create({
         data: {
           tenantId,
@@ -61,6 +69,7 @@ export async function POST(req: Request) {
       // keyId is the PUBLIC key ID required by checkout.js — never the secret.
       return { order: updated, razorpayOrder: j, keyId: getRazorpayKeyId() };
     });
+    if ((result as any).error) return NextResponse.json({ error: (result as any).error }, { status: (result as any).status ?? 400 });
     return NextResponse.json(result);
   } catch (e: any) {
     if (e.message?.includes("UNAUTHORIZED")) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

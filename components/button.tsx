@@ -6,11 +6,11 @@ type ButtonProps = {
   children: ReactNode;
   href?: string;
   type?: "button" | "submit";
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "destructive";
   className?: string;
   onClick?: () => void;
   disabled?: boolean;
-  size?: "default" | "lg";
+  size?: "default" | "sm" | "lg";
 };
 
 const variants = {
@@ -19,11 +19,14 @@ const variants = {
   secondary:
     "border-line bg-white text-navy hover:-translate-y-0.5 hover:border-navy/45 hover:bg-paper hover:shadow-[0_4px_12px_rgba(6,20,46,0.04)]",
   ghost:
-    "border-transparent bg-transparent text-navy hover:-translate-y_0.5 hover:bg-white hover:shadow-[0_4px_12px_rgba(6,20,46,0.02)]",
+    "border-transparent bg-transparent text-navy hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_4px_12px_rgba(6,20,46,0.02)]",
+  destructive:
+    "border-error bg-error text-white hover:-translate-y-0.5 hover:bg-error-hover hover:shadow-[0_4px_12px_rgba(239,68,68,0.12)]",
 };
 
 const sizes = {
   default: "h-12 px-6 text-sm",
+  sm: "h-10 px-4 text-sm",
   lg: "h-14 px-8 text-base",
 };
 

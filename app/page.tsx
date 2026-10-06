@@ -80,24 +80,23 @@ export default function Home() {
       <section className="border-b border-line bg-paper">
         <Container className="grid min-h-[calc(100vh-4rem)] gap-8 py-24 sm:py-32 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <Reveal>
-            <Badge>Acquisition OS</Badge>
-            <h1 className="mt-8 max-w-5xl font-heading text-[56px] font-semibold leading-[0.95] tracking-[-0.03em] text-navy sm:text-[72px] lg:text-[80px]">
-              Your next customers, found and contacted.
+            <Badge>WAVES ONE</Badge>
+            <h1 className="mt-8 max-w-5xl font-heading text-[64px] font-semibold leading-[0.92] tracking-[-0.03em] text-navy sm:text-[80px] lg:text-[88px]">
+              Your business. Made easier.
             </h1>
             <p className="mt-8 max-w-2xl text-lg leading-[1.6] tracking-normal text-body">
-              Acquisition OS researches your market, finds and verifies prospects, scores them, and runs personalised
-              outreach — with your approval before anything sends.
+              WAVES handles the work behind your business, from finding customers to running day-to-day operations.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Button href="/signup?from=proof">
                 Start the 2-Day Proof
               </Button>
-              <Button href="/#lease" variant="secondary">
-                See pricing
+              <Button href="/case-study" variant="secondary">
+                See how it works
               </Button>
             </div>
             <p className="mt-8 max-w-xl border-l border-line pl-6 text-sm leading-6 text-body">
-              No payment required for the proof. Lease it from 30 days when it works for your business.
+              Built for business owners who want their company to run without them.
             </p>
           </Reveal>
           <Reveal delay={0.12} className="w-full lg:scale-105 xl:scale-110 origin-center">

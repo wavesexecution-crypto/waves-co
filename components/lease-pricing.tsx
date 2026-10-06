@@ -11,10 +11,14 @@ export function LeasePricing() {
   return (
     <Section id="lease" className="border-t border-line bg-white py-24 sm:py-32">
       <Reveal className="max-w-3xl">
-        <Badge>WAVES ONE</Badge>
-        <h2 className="mt-6 font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">WAVES ONE</h2>
+        <Badge>Acquisition OS</Badge>
+        <h2 className="mt-6 font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
+          Lease Acquisition OS
+        </h2>
         <p className="mt-6 max-w-2xl text-lg leading-[1.6] text-body">
-          The system that runs your business. Experience it through a <span className="font-semibold text-navy">2-Day Proof</span> with your own business context, then lease the same system for the duration you need. One product. Lease duration is the only variable.
+          Run it on your own business first through a <span className="font-semibold text-navy">2-Day Proof</span> — no
+          payment required. When it works, lease the same system for the duration you need. One product. Lease duration
+          is the only variable.
         </p>
         <div className="mt-6 inline-flex items-center gap-3 rounded-sm border border-line bg-paper px-4 py-3">
           <span className="font-mono text-xs uppercase tracking-[0.14em] text-accent">2-Day Proof</span>
@@ -52,11 +56,15 @@ export function LeasePricing() {
         })}
       </div>
 
+      {/* One closing CTA. The 30-day card above already carries the proof CTA,
+          so repeating it here was duplicate. */}
       <Reveal delay={0.2} className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-        <Button href="/signup?from=proof">Start 2-Day Proof — No payment</Button>
+        <Button href="/signup?from=proof">Start the 2-Day Proof — no payment</Button>
         <Button href="/billing" variant="secondary">View lease details</Button>
       </Reveal>
-      <p className="mt-4 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-muted">No auto-renewal. Extend explicitly. Proof abuse prevented server-side.</p>
+      <p className="mt-4 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        No auto-renewal. Extend explicitly. Proof abuse prevented server-side.
+      </p>
     </Section>
   );
 }

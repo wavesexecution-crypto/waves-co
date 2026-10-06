@@ -15,10 +15,11 @@ export function Footer() {
               </span>
             </div>
             <h2 className="font-heading text-[28px] font-semibold leading-tight text-navy sm:text-[32px] max-w-md">
-              Your business. Made easier.
+              Your next customers, found and contacted.
             </h2>
             <p className="max-w-md text-sm leading-relaxed text-body">
-              WAVES handles the work behind your business, from finding customers to running day-to-day operations.
+              Acquisition OS researches your market, finds and verifies prospects, scores them, and runs personalised
+              outreach — with your approval before anything sends.
             </p>
           </div>
 
@@ -28,14 +29,17 @@ export function Footer() {
               Navigation
             </span>
             <nav className="flex flex-col gap-4 text-sm font-medium text-body">
-              <Link className="transition-colors duration-200 hover:text-navy" href="/#audit-cycle">
-                Product
+              <Link className="transition-colors duration-200 hover:text-navy" href="/#products">
+                Acquisition OS
+              </Link>
+              <Link className="transition-colors duration-200 hover:text-navy" href="/#lease">
+                Pricing
               </Link>
               <Link className="transition-colors duration-200 hover:text-navy" href="/case-study">
                 Case Study
               </Link>
-              <Link className="transition-colors duration-200 hover:text-navy" href="/architecture-audit">
-                Start with WAVES
+              <Link className="transition-colors duration-200 hover:text-navy" href="/login">
+                Sign in
               </Link>
             </nav>
           </div>
@@ -46,11 +50,17 @@ export function Footer() {
               Get Started
             </span>
             <p className="text-sm leading-relaxed text-body">
-              Book a confidential intake review to see how WAVES works for your business.
+              Run the 2-Day Proof on your own business. No payment required.
             </p>
-            <Button href="/architecture-audit" className="w-full sm:w-auto">
-              Start with WAVES
+            <Button href="/signup?from=proof" className="w-full sm:w-auto">
+              Start the 2-Day Proof
             </Button>
+            <Link
+              href="/architecture-audit"
+              className="text-sm text-body underline underline-offset-4 transition-colors duration-200 hover:text-navy"
+            >
+              Book a confidential review
+            </Link>
           </div>
         </div>
 

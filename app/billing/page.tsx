@@ -28,8 +28,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const lease = ent?.leaseType ?? "—";
   return (
     <div className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
-      <h1 className="font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy">Billing — WAVES ONE</h1>
-      <p className="mt-3 max-w-2xl text-sm leading-6 text-body">One WAVES account. Lease duration is the only variable. Same system for every lease.</p>
+      <h1 className="font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy">Billing - Acquisition OS</h1>
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-body">One WAVES account. Acquisition OS is one product. Lease duration is the only variable.</p>
       {!tenantId && <p className="mt-6 text-sm text-muted">Please <Link href="/login" className="underline">sign in</Link> to view your lease.</p>}
       {tenantId && (
         <div className="mt-8 grid gap-6 md:grid-cols-2">
@@ -63,7 +63,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       )}
 
       {leaseRequested && !tenantId && (
-        <p className="mt-8 text-sm text-muted">Please <Link href="/login" className="underline">sign in</Link> to lease WAVES ONE for {requestedDays} days.</p>
+        <p className="mt-8 text-sm text-muted">Please <Link href="/login" className="underline">sign in</Link> to lease Acquisition OS for {requestedDays} days.</p>
       )}
 
       {tenantId && (

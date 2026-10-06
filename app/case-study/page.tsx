@@ -53,7 +53,7 @@ export default function CaseStudyPage() {
               From daily founder involvement to a business that runs without them.
             </h1>
             <p className="mt-8 max-w-3xl text-lg leading-[1.6] text-body">
-              A founder-led commercial services company had a simple problem: routine work still waited for the owner. We rebuilt how decisions, handoffs, and reviews moved through the team using WAVES ONE.
+              A founder-led commercial services company had a simple problem: routine work still waited for the owner. They ran Acquisition OS for 90 days and measured what changed.
             </p>
           </Reveal>
 
@@ -115,7 +115,7 @@ export default function CaseStudyPage() {
             </h2>
           </Reveal>
           <Reveal className="font-mono text-[10px] text-muted text-right hidden md:block">
-            WAVES ONE // SYS.DWG.084
+            Acquisition OS // SYS.DWG.084
           </Reveal>
         </div>
 
@@ -181,14 +181,14 @@ export default function CaseStudyPage() {
         <Container className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <span className="font-mono text-[10px] uppercase tracking-widest text-accent block mb-4">
-              Start with WAVES
+              Start 2-Day Proof
             </span>
             <h2 className="max-w-3xl font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] sm:text-[40px]">
               Find what still depends on you.
             </h2>
           </div>
-          <Button href="/architecture-audit" className="w-fit">
-            Book Architecture Review
+          <Button href="/signup?from=proof" className="w-fit">
+            Start the 2-Day Proof
           </Button>
         </Container>
       </section>

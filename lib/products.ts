@@ -7,34 +7,23 @@ export type Product = {
   href: string;
 };
 
-// Active public products
+// WAVES sells exactly one product: Acquisition OS. There are no additional
+// products, no tiers and no per-seat variants — lease duration is the only
+// variable (see lib/leases.ts). Keep this array single-entry so the product
+// section and /products/[slug] cannot reintroduce a catalogue.
 export const PRODUCTS: Product[] = [
   {
-    slug: "acquisition",
-    name: "WAVES Acquisition",
-    tagline: "Find your next customers",
-    description: "Automated discovery, verification, scoring and outreach — from lead to qualified pipeline without manual follow-ups.",
-    highlights: ["Lead Discovery & Enrichment", "Qualification & Segmentation", "Campaign Workflow with Human Approval"],
-    href: "/products/acquisition",
-  },
-  {
-    slug: "studio",
-    name: "WAVES Studio",
-    tagline: "Create your content",
-    description: "Generate, edit, and publish content across channels. Brand-consistent output at scale without a creative team.",
-    highlights: ["Multi-channel Content Generation", "Brand Voice & Style Control", "Approval Workflows"],
-    href: "/products/studio",
-  },
-  {
-    slug: "automation",
-    name: "WAVES Automation",
-    tagline: "Put repetitive work on autopilot",
-    description: "Connect your tools, define rules, and let WAVES handle the routine. Approvals, routing, reminders — done.",
-    highlights: ["Cross-tool Workflows", "Conditional Logic & Routing", "Human-in-the-loop Approvals"],
-    href: "/products/automation",
+    slug: "acquisition-os",
+    name: "Acquisition OS",
+    tagline: "Find, qualify and contact your next customers",
+    description:
+      "Acquisition OS researches your market, discovers and verifies prospects, scores them against your ideal customer, and runs personalised outreach — with a human approval gate before anything is ever sent.",
+    highlights: [
+      "Market research and prospect discovery, run continuously",
+      "Email verification and lead scoring against your ideal customer",
+      "Personalised outreach you approve before a single email sends",
+      "Reply monitoring, follow-ups and a report you can read",
+    ],
+    href: "/products/acquisition-os",
   },
 ];
-
-// Deferred products (kept for internal reference, not exposed publicly)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const DEFERRED_PRODUCTS: Product[] = [];

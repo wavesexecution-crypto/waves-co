@@ -14,7 +14,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   return (
     <div className="mx-auto max-w-4xl px-6 py-16 sm:py-24">
       <p className="font-mono text-xs uppercase tracking-[0.14em] text-muted">{product.tagline}</p>
-      <h1 className="mt-3 font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy">{product.name}</h1>
+      <h1 className="mt-3 font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
+        {product.name}
+      </h1>
       <p className="mt-4 max-w-2xl text-sm leading-6 text-body">{product.description}</p>
       <ul className="mt-8 space-y-2">
         {product.highlights.map((h) => (
@@ -26,16 +28,16 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </ul>
       <div className="mt-10 flex flex-col gap-4 sm:flex-row">
         <Link
-          href={product.slug === "acquisition" ? "/billing" : "/architecture-audit"}
+          href="/signup?from=proof"
           className="inline-flex h-10 items-center justify-center rounded-sm bg-navy px-5 text-sm font-medium text-white"
         >
-          {product.slug === "acquisition" ? "Lease Acquisition OS" : "Start with WAVES"}
+          Start the 2-Day Proof
         </Link>
         <Link
           href="/#lease"
           className="inline-flex h-10 items-center justify-center rounded-sm border border-line bg-white px-5 text-sm font-medium text-navy"
         >
-          View lease options
+          View lease pricing
         </Link>
       </div>
       <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">

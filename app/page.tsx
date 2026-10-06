@@ -29,47 +29,47 @@ export const metadata: Metadata = {
 
 const problems = [
   {
-    title: "You're the bottleneck.",
-    body: "Every decision, approval, and exception runs through you. The company moves at the speed of your attention.",
+    title: "Research eats your week.",
+    body: "Finding the right prospects, checking they exist, and recording their details is a full-time job that produces no customers.",
     icon: LockKeyhole,
   },
   {
-    title: "Work falls through the cracks.",
-    body: "No clear ownership means follow-ups get missed. Customers notice. Revenue slips.",
+    title: "The list goes stale.",
+    body: "A spreadsheet of leads is out of date before you finish writing the first email. Nobody calls them back.",
     icon: Clock,
   },
   {
-    title: "Growth makes it worse.",
-    body: "More customers, more team, more complexity. The informal systems that worked at 5 people break at 50.",
+    title: "Outreach does not scale.",
+    body: "The tenth sequence gets worse, not better. Quality drops exactly when volume matters most.",
     icon: GitBranch,
   },
   {
-    title: "You can't step away.",
-    body: "A week offline feels risky because too much still lives in your head, not in the system.",
+    title: "You cannot let go of it.",
+    body: "You cannot take a week off, because the follow-ups only happen when you remember them.",
     icon: AlertTriangle,
   },
 ];
 
 const solution = [
   {
-    title: "Get customers",
-    body: "WAVES finds qualified prospects, runs outreach, and builds pipeline without manual work.",
+    title: "Discover",
+    body: "Acquisition OS researches your market and finds businesses that match your ideal customer, without you hiring a researcher.",
   },
   {
-    title: "Make sales",
-    body: "Leads move through a clear process. Every stage has an owner. Nothing stalls without visibility.",
+    title: "Verify",
+    body: "Every prospect's email is verified and every contact record is checked before it reaches an approval queue.",
   },
   {
-    title: "Run operations",
-    body: "Daily work flows through defined handoffs. The team knows what to do without asking you.",
+    title: "Qualify",
+    body: "Leads are scored against your criteria, so you review a ranked list instead of a spreadsheet of guesses.",
   },
   {
-    title: "Manage your team",
-    body: "Roles, decision rights, and escalation paths are clear. Managers manage. You lead.",
+    title: "Outreach",
+    body: "Personalised emails are drafted for each lead and queued for your approval. Nothing is ever sent automatically.",
   },
   {
-    title: "Track your money",
-    body: "Invoices, payments, and pipeline in one view. No more midnight spreadsheet sessions.",
+    title: "Follow up",
+    body: "Replies are routed to you, follow-ups run on schedule, and bounces and unsubscribes are honoured automatically.",
   },
 ];
 
@@ -80,23 +80,24 @@ export default function Home() {
       <section className="border-b border-line bg-paper">
         <Container className="grid min-h-[calc(100vh-4rem)] gap-8 py-24 sm:py-32 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <Reveal>
-            <Badge>WAVES ONE</Badge>
-            <h1 className="mt-8 max-w-5xl font-heading text-[64px] font-semibold leading-[0.92] tracking-[-0.03em] text-navy sm:text-[80px] lg:text-[88px]">
-              Your business. Made easier.
+            <Badge>Acquisition OS</Badge>
+            <h1 className="mt-8 max-w-5xl font-heading text-[56px] font-semibold leading-[0.95] tracking-[-0.03em] text-navy sm:text-[72px] lg:text-[80px]">
+              Your next customers, found and contacted.
             </h1>
             <p className="mt-8 max-w-2xl text-lg leading-[1.6] tracking-normal text-body">
-              WAVES handles the work behind your business, from finding customers to running day-to-day operations.
+              Acquisition OS researches your market, finds and verifies prospects, scores them, and runs personalised
+              outreach — with your approval before anything sends.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Button href="/architecture-audit">
-                Start with WAVES
+              <Button href="/signup?from=proof">
+                Start the 2-Day Proof
               </Button>
-              <Button href="/case-study" variant="secondary">
-                See how it works
+              <Button href="/#lease" variant="secondary">
+                See pricing
               </Button>
             </div>
             <p className="mt-8 max-w-xl border-l border-line pl-6 text-sm leading-6 text-body">
-              Built for business owners who want their company to run without them.
+              No payment required for the proof. Lease it from 30 days when it works for your business.
             </p>
           </Reveal>
           <Reveal delay={0.12} className="w-full lg:scale-105 xl:scale-110 origin-center">
@@ -105,29 +106,31 @@ export default function Home() {
         </Container>
       </section>
 
-      {/* Simple Explanation */}
+      {/* What Acquisition OS does */}
       <Section className="py-24 sm:py-32">
         <Reveal className="max-w-4xl">
-          <Badge>One system</Badge>
+          <Badge>Acquisition OS</Badge>
           <h2 className="mt-6 font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
-            One system for your entire business.
+            The whole outbound process, on repeat.
           </h2>
           <p className="mt-6 max-w-2xl text-lg leading-[1.6] text-body">
-            WAVES ONE replaces the patchwork of tools, spreadsheets, and manual follow-ups with a single system that runs the work from A to Z.
+            Outbound acquisition is five repetitive jobs. Acquisition OS runs all five continuously, so the only thing
+            left for you is the approval decision.
           </p>
         </Reveal>
       </Section>
 
-      {/* WAVES ONE */}
+      {/* Why it is worth the lease */}
       <Section className="border-t border-line bg-paper/40 py-24 sm:py-32">
         <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
           <Reveal>
-            <Badge>WAVES ONE</Badge>
+            <Badge>Why it pays for itself</Badge>
             <h2 className="mt-6 font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
-              The system that runs your business.
+              One closed customer covers the lease.
             </h2>
             <p className="mt-6 max-w-xl text-lg leading-[1.6] text-body">
-              Everything your business needs, in one place. WAVES ONE handles the work between functions so you don't have to.
+              The work this replaces — a researcher, a data provider, an SDR writing and sending sequences, and a
+              follow-up tracker — is the cost line you are already paying. One additional customer pays for the lease.
             </p>
           </Reveal>
           <Reveal delay={0.08} className="w-full">
@@ -139,12 +142,12 @@ export default function Home() {
       {/* Business Functions */}
       <Section className="border-y border-line bg-white py-24 sm:py-32">
         <Reveal className="max-w-4xl">
-          <Badge>What WAVES does</Badge>
+          <Badge>How it works</Badge>
           <h2 className="mt-6 font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
-            The work behind your business.
+            Five steps, every run.
           </h2>
           <p className="mt-6 max-w-xl text-lg leading-[1.6] text-body">
-            Five core functions. WAVES handles the work between them.
+            Each one is a job you would otherwise staff, schedule and check by hand.
           </p>
         </Reveal>
         <div className="mt-16 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -161,10 +164,11 @@ export default function Home() {
         </div>
         <div className="mt-12 text-center">
           <p className="font-heading text-[22px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy sm:text-[28px]">
-            ONE handles the work between them.
+            You approve. Acquisition OS sends.
           </p>
           <p className="mt-4 max-w-xl mx-auto text-body">
-            Leads become customers. Customers become projects. Projects become revenue. The handoffs happen automatically.
+            Nothing reaches a prospect without your explicit approval. The system does the searching, verifying,
+            scoring and drafting — you make the one decision that carries your reputation.
           </p>
         </div>
       </Section>
@@ -174,64 +178,65 @@ export default function Home() {
         <Reveal className="max-w-4xl">
           <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-            Product in action
+            What you get
           </div>
           <h2 className="mt-6 font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
-            See the work getting done.
+            What the system produces for you.
           </h2>
           <p className="mt-6 max-w-2xl text-lg leading-[1.6] text-body">
-            Real operational activity from businesses running on WAVES. Not screenshots — live data.
+            Acquisition OS works against your own market and your own brief. The output is specific to the business you
+            describe, not a shared list.
           </p>
         </Reveal>
 
         <div className="mt-12 grid gap-px bg-line md:grid-cols-2 xl:grid-cols-4">
           <Reveal>
             <article className="premium-card flex h-full flex-col rounded-sm bg-white p-8">
-              <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">leads</div>
+              <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">discover</div>
               <h3 className="mt-4 font-heading text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy sm:text-[22px]">
-                47 new qualified leads this week
+                A researched prospect list
               </h3>
-              <p className="mt-3 flex-grow text-sm leading-7 text-body">Discovered, enriched, and scored automatically. No manual research.</p>
+              <p className="mt-3 flex-grow text-sm leading-7 text-body">Businesses in your geography and category, matched to your ideal customer and scored.</p>
             </article>
           </Reveal>
           <Reveal delay={0.05}>
             <article className="premium-card flex h-full flex-col rounded-sm bg-white p-8">
-              <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">outreach</div>
+              <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">verify</div>
               <h3 className="mt-4 font-heading text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy sm:text-[22px]">
-                12 follow-ups sent today
+                Deliverable contact data
               </h3>
-              <p className="mt-3 flex-grow text-sm leading-7 text-body">Personalized sequences running on schedule. Replies routed to the right person.</p>
+              <p className="mt-3 flex-grow text-sm leading-7 text-body">Email status verified before anything is queued, so bounces and damage to your domain reputation are avoided.</p>
             </article>
           </Reveal>
           <Reveal delay={0.1}>
             <article className="premium-card flex h-full flex-col rounded-sm bg-white p-8">
-              <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">meetings</div>
+              <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">approve</div>
               <h3 className="mt-4 font-heading text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy sm:text-[22px]">
-                4 meetings booked this week
+                Drafts you read and send
               </h3>
-              <p className="mt-3 flex-grow text-sm leading-7 text-body">Calendar links sent, reminders automated, prep notes generated.</p>
+              <p className="mt-3 flex-grow text-sm leading-7 text-body">Every message is written for that specific business and waits for your approval. Nothing sends itself.</p>
             </article>
           </Reveal>
           <Reveal delay={0.15}>
             <article className="premium-card flex h-full flex-col rounded-sm bg-white p-8">
-              <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">pipeline</div>
+              <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">follow up</div>
               <h3 className="mt-4 font-heading text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy sm:text-[22px]">
-                ₹2.4L pipeline generated
+                Replies and a readable report
               </h3>
-              <p className="mt-3 flex-grow text-sm leading-7 text-body">Every deal tracked from first touch to close. Forecast updates in real time.</p>
+              <p className="mt-3 flex-grow text-sm leading-7 text-body">Replies routed to you, follow-ups on schedule, and a report showing what was sent, opened and answered.</p>
             </article>
           </Reveal>
         </div>
 
         <p className="mt-8 font-mono text-xs tracking-[0.14em] text-muted">
-          Live data from WAVES ONE customers · Updated in real time
+          Built from your brief and your market · Results depend on the segment you lease it for
         </p>
       </Section>
 
-      {/* Other WAVES Products */}
+      {/* Acquisition OS — the single product */}
       <Products />
 
-      {/* WAVES ONE Pricing / Lease */}
+      {/* Acquisition OS Pricing / Lease */}
       <LeasePricing />
 
       {/* Why WAVES / CTA */}
@@ -240,17 +245,18 @@ export default function Home() {
           <div>
             <div className="mb-6 inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
               <CircleDashed size={14} aria-hidden="true" />
-              Why WAVES
+              Start here
             </div>
             <h2 className="max-w-3xl font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] sm:text-[40px]">
-              Powerful underneath. Simple on the surface.
+              See it work on your business first.
             </h2>
             <p className="mt-6 max-w-xl text-lg leading-[1.6] text-body">
-              Sophisticated orchestration, AI agents, and automation infrastructure — all hidden behind a clean interface your team actually uses.
+              Start the 2-Day Proof. Describe your market and offer, and Acquisition OS researches it and produces a
+              real prospect list and drafted outreach — before you pay anything.
             </p>
           </div>
-          <Button href="/architecture-audit" className="w-fit">
-            Make running your business easier
+          <Button href="/signup?from=proof" className="w-fit">
+            Start the 2-Day Proof
           </Button>
         </Container>
       </Section>

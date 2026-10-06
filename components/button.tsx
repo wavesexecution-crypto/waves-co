@@ -9,6 +9,8 @@ type ButtonProps = {
   variant?: "primary" | "secondary" | "ghost";
   className?: string;
   onClick?: () => void;
+  disabled?: boolean;
+  size?: "default" | "lg";
 };
 
 const variants = {
@@ -17,11 +19,16 @@ const variants = {
   secondary:
     "border-line bg-white text-navy hover:-translate-y-0.5 hover:border-navy/45 hover:bg-paper hover:shadow-[0_4px_12px_rgba(6,20,46,0.04)]",
   ghost:
-    "border-transparent bg-transparent text-navy hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_4px_12px_rgba(6,20,46,0.02)]",
+    "border-transparent bg-transparent text-navy hover:-translate-y_0.5 hover:bg-white hover:shadow-[0_4px_12px_rgba(6,20,46,0.02)]",
+};
+
+const sizes = {
+  default: "h-12 px-6 text-sm",
+  lg: "h-14 px-8 text-base",
 };
 
 const base =
-  "focus-ring group inline-flex h-12 items-center justify-center gap-2 rounded-sm border px-6 text-sm font-semibold leading-none transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]";
+  "focus-ring group inline-flex items-center justify-center gap-2 rounded-sm border font-semibold leading-none transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]";
 
 export function Button({
   children,
@@ -30,12 +37,14 @@ export function Button({
   variant = "primary",
   className = "",
   onClick,
+  disabled = false,
+  size = "default",
 }: ButtonProps) {
-  const classes = `${base} ${variants[variant]} ${className}`;
+  const classes = `${base} ${sizes[size]} ${variants[variant]} ${className} ${disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`;
 
   if (href) {
     return (
-      <Link href={href} className={classes}>
+      <Link href={href} className={classes} aria-disabled={disabled}>
         <span>{children}</span>
         <ArrowRight
           aria-hidden="true"
@@ -48,7 +57,7 @@ export function Button({
   }
 
   return (
-    <button type={type} className={classes} onClick={onClick}>
+    <button type={type} className={classes} onClick={onClick} disabled={disabled}>
       <span>{children}</span>
       <ArrowRight
         aria-hidden="true"

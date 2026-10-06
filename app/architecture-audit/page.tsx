@@ -7,14 +7,14 @@ import { siteConfig } from "@/app/site";
 import { AuditForm } from "./audit-form";
 
 export const metadata: Metadata = {
-  title: "Start with WAVES",
+  title: "Architecture Review",
   description:
-    "Book a focused review to find what still depends on you and see how WAVES can run the work.",
+    "Book a focused review to find what still depends on you and see how Acquisition OS can run the work.",
   alternates: {
     canonical: "/architecture-audit",
   },
   openGraph: {
-    title: "Start with WAVES — Architecture Review",
+    title: "Architecture Review",
     description:
       "Find where work slows down, where decisions wait, and what still depends on you.",
     url: `${siteConfig.url}/architecture-audit`,
@@ -33,11 +33,11 @@ export default function ArchitectureAuditPage() {
               <div>FILE REF: WAVES-INTAKE-2026</div>
             </div>
 
-            <Badge>Start with WAVES</Badge>
+            <Badge>Architecture Review</Badge>
             <div className="grid gap-8 mt-8 lg:grid-cols-[1fr_1fr] lg:items-end">
               <div>
                 <h1 className="max-w-3xl font-heading text-[40px] font-semibold leading-[1.1] tracking-[-0.02em] text-navy sm:text-[56px]">
-                  Start with WAVES
+                  Architecture Review
                 </h1>
               </div>
               <div>

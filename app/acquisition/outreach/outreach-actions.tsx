@@ -89,7 +89,7 @@ export function OrderSendButton({ orderId }: { orderId: string }) {
 }
 
 /** Sequentially send all approved orders (idempotent per order). */
-export function SendAllButton({ orderIds }: { orderIds: string[] }) {
+export function SendAllButton({ orderIds, className }: { orderIds: string[]; className?: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +123,7 @@ export function SendAllButton({ orderIds }: { orderIds: string[] }) {
   };
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className={`flex flex-col items-end gap-2 ${className ?? ""}`}>
       <Button disabled={pending || orderIds.length === 0} onClick={sendAll}>
         {pending ? "Sending…" : `Send all ${orderIds.length} emails`}
       </Button>

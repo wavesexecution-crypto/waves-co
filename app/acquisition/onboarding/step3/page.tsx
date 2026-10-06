@@ -6,6 +6,7 @@ import { Button } from "@/components/button";
 import { Container, Section } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { CheckCircle2, Search, Sparkles } from "lucide-react";
+import { OnboardingProgress } from "../onboarding-progress";
 
 interface OnboardingData {
   businessType: string;
@@ -136,12 +137,13 @@ export default function OnboardingStep3() {
 
   return (
     <Container className="py-12 sm:py-20">
+      <OnboardingProgress currentStep={3} />
+      
       <Reveal className="max-w-2xl mx-auto text-center mb-12">
         <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
           <Sparkles size={32} className="text-accent" />
         </div>
-        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Step 3 of 3</p>
-        <h1 className="mt-4 font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
+        <h1 className="font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
           Ready to find customers
         </h1>
         <p className="mt-4 text-lg leading-[1.6] text-body">
@@ -192,11 +194,11 @@ export default function OnboardingStep3() {
             {error && (
               <p role="alert" className="mb-4 text-center text-sm text-red-600">{error}</p>
             )}
-          <Button onClick={handleStartSearch} className="w-full" size="lg">
-            <CheckCircle2 size={18} className="mr-2" />
-            Start finding customers
-          </Button>
-          </>
+            <Button onClick={handleStartSearch} className="w-full" size="lg">
+              <CheckCircle2 size={18} className="mr-2" />
+              Start finding customers
+            </Button>
+            </>
         )}
       </Reveal>
 

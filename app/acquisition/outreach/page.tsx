@@ -64,6 +64,13 @@ export default async function OutreachPage() {
     loadError = "Could not load outreach. Please refresh to retry.";
   }
 
+  // Determine primary action
+  const primaryAction = approved.length > 0
+    ? { label: `Send ${approved.length} emails`, action: "send_all" as const, href: "/acquisition/outreach" }
+    : ready.length > 0
+    ? { label: `Review ${ready.length} drafts`, action: "review" as const, href: "/acquisition/leads" }
+    : { label: "Add prospects", action: "add" as const, href: "/acquisition/leads" };
+
   return (
     <Container className="py-8">
       {/* Header */}
@@ -78,13 +85,42 @@ export default async function OutreachPage() {
               {approved.length} approved and ready to send · {ready.length} awaiting decision
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <Link href="/acquisition/leads">
               <Button variant="secondary">← Leads</Button>
             </Link>
             <Link href="/acquisition/replies">
               <Button variant="secondary">Replies →</Button>
             </Link>
+          </div>
+        </div>
+      </Reveal>
+
+      {/* Primary Action Banner */}
+      <Reveal className="mb-8">
+        <div className="rounded-lg border border-accent bg-accent/5 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Next action</p>
+              <h2 className="mt-1 font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy sm:text-[28px]">
+                {primaryAction.label}
+              </h2>
+            </div>
+            <div className="flex gap-3 w-full sm:w-auto">
+              {primaryAction.action === "send_all" && (
+                <SendAllButton orderIds={approved.map((o) => o.id)} className="w-full sm:w-auto" />
+              )}
+              {primaryAction.action === "review" && (
+                <Link href={primaryAction.href}>
+                  <Button className="w-full sm:w-auto" size="lg">Review drafts</Button>
+                </Link>
+              )}
+              {primaryAction.action === "add" && (
+                <Link href={primaryAction.href}>
+                  <Button className="w-full sm:w-auto" size="lg">Add prospects</Button>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </Reveal>
@@ -101,7 +137,6 @@ export default async function OutreachPage() {
               <h2 className="font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy">
                 Ready to send ({approved.length})
               </h2>
-              {approved.length > 0 && <SendAllButton orderIds={approved.map((o) => o.id)} />}
             </div>
 
             {approved.length === 0 ? (
@@ -199,7 +234,10 @@ function EmailCard({ email, action, badge }: { email: TenantLeadRow; action: Rea
           </div>
         </div>
 
-        {action}
+        {/* Primary action prominently displayed */}
+        <div className="flex flex-col gap-3 lg:ml-8">
+          {action}
+        </div>
       </div>
     </div>
   );

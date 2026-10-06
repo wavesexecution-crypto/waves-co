@@ -94,7 +94,7 @@ export default async function LeadsPage({
               {counts.ready} waiting for your decision
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <LeadImportForm />
             <Link href="/acquisition/outreach">
               <Button variant="secondary">Outreach →</Button>
@@ -107,14 +107,18 @@ export default async function LeadsPage({
       <Reveal className="mb-6">
         <form action="/acquisition/leads" method="get" className="flex gap-3">
           <input type="hidden" name="status" value={tab} />
-          <input
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Search business, contact, email"
-            maxLength={100}
-            className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy"
-          />
+          <div className="flex-1">
+            <label htmlFor="search" className="sr-only">Search leads</label>
+            <input
+              id="search"
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="Search business, contact, email"
+              maxLength={100}
+              className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+            />
+          </div>
           <Button type="submit" variant="secondary">Search</Button>
         </form>
       </Reveal>
@@ -161,9 +165,12 @@ export default async function LeadsPage({
             <p className="mt-2 text-sm text-body">
               Add prospects above and they will appear here for your review. Nothing is fabricated — this list shows only what you added.
             </p>
-            <Button href="/acquisition" variant="secondary" className="mt-6">
-              Back to Home
-            </Button>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+              <LeadImportForm />
+              <Button href="/acquisition/onboarding" variant="secondary">
+                Complete setup
+              </Button>
+            </div>
           </div>
         ) : leads.length === 0 ? (
           <div className="rounded-lg border border-line bg-white p-12 text-center">
@@ -189,7 +196,7 @@ export default async function LeadsPage({
           <h2 className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent mb-4">
             Decided — {counts.approved} approved · {counts.rejected} rejected
           </h2>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Link href={qs({ status: "approved" })}>
               <Button variant="secondary">View approved</Button>
             </Link>
@@ -236,7 +243,10 @@ function LeadCard({ lead }: { lead: TenantLeadRow }) {
           </details>
         </div>
 
-        <LeadDecisionButtons orderId={lead.id} />
+        {/* Primary actions - always visible and prominent */}
+        <div className="flex flex-col gap-3 lg:ml-8">
+          <LeadDecisionButtons orderId={lead.id} />
+        </div>
       </div>
     </div>
   );

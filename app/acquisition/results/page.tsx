@@ -92,13 +92,33 @@ export default async function ResultsPage() {
   const conversionRate = pct(results.interested, results.replies);
   const replyRate = pct(results.replies, results.peopleContacted);
 
+  // Determine primary next action
+  const primaryAction = (() => {
+    if (results.interested > 0) {
+      return { label: `Reply to ${results.interested} interested`, href: "/acquisition/replies?category=interested", description: "Prospects are waiting for your response" };
+    }
+    if (results.replies > 0) {
+      return { label: "View replies", href: "/acquisition/replies", description: `${results.replies} replies received` };
+    }
+    if (results.peopleContacted > 0) {
+      return { label: "Check for replies", href: "/acquisition/replies", description: `${results.peopleContacted} emails sent, waiting for responses` };
+    }
+    if (results.awaitingDecision > 0) {
+      return { label: "Review leads", href: "/acquisition/leads", description: `${results.awaitingDecision} prospects awaiting decision` };
+    }
+    if (results.prospects > 0) {
+      return { label: "Start outreach", href: "/acquisition/outreach", description: "Send emails to approved prospects" };
+    }
+    return { label: "Add prospects", href: "/acquisition/onboarding", description: "Set up your first acquisition cycle" };
+  })();
+
   return (
     <Container className="py-8">
       {/* Header */}
       <Reveal className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Results</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Reports</p>
             <h1 className="mt-2 font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
               Your acquisition report
             </h1>
@@ -111,6 +131,26 @@ export default async function ResultsPage() {
               <Button variant="secondary">← Replies</Button>
             </Link>
             <PrintButton />
+          </div>
+        </div>
+      </Reveal>
+
+      {/* Primary Next Action */}
+      <Reveal className="mb-10">
+        <div className="rounded-lg border border-accent bg-accent/5 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Your next step</p>
+              <h2 className="mt-1 font-heading text-[28px] font-semibold tracking-[-0.01em] text-navy sm:text-[36px]">
+                {primaryAction.label}
+              </h2>
+              <p className="mt-1 text-sm text-body">{primaryAction.description}</p>
+            </div>
+            <Link href={primaryAction.href}>
+              <Button size="lg" className="w-full sm:w-auto shrink-0">
+                {primaryAction.label}
+              </Button>
+            </Link>
           </div>
         </div>
       </Reveal>
@@ -228,10 +268,10 @@ export default async function ResultsPage() {
         </Section>
       </Reveal>
 
-      {/* Next Actions */}
+      {/* Next Actions - Prominent */}
       <Reveal delay={0.25}>
         <div className="rounded-lg border border-line bg-white p-6">
-          <h3 className="font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy">
+          <h3 className="font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy mb-4">
             What to do next
           </h3>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">

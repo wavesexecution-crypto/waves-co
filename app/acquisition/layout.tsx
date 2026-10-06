@@ -26,16 +26,15 @@ export default async function AcquisitionLayout({
               </Link>
               <nav className="hidden md:flex items-center gap-1 bg-paper/50 rounded-lg p-1" aria-label="Acquisition OS navigation">
                 <Link href="/acquisition" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Home</Link>
+                <Link href="/acquisition/onboarding" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Setup</Link>
                 <Link href="/acquisition/leads" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Leads</Link>
                 <Link href="/acquisition/outreach" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Outreach</Link>
                 <Link href="/acquisition/replies" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Replies</Link>
-                <Link href="/acquisition/results" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Results</Link>
+                <Link href="/acquisition/results" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Reports</Link>
+                <Link href="/acquisition/billing" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Billing</Link>
               </nav>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/acquisition/billing" className="hidden sm:block px-3 py-1.5 text-sm font-medium text-body rounded-md border border-line hover:bg-paper transition-colors">
-                Access
-              </Link>
               {user ? (
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-muted">{user.name || user.email}</span>

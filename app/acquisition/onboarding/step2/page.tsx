@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/button";
 import { Container, Section } from "@/components/container";
 import { Reveal } from "@/components/reveal";
+import { OnboardingProgress } from "../onboarding-progress";
 
 const companySizes = [
   { id: "1-10", label: "1-10 employees", description: "Startups, small teams" },
@@ -26,17 +27,22 @@ const roles = [
   "HR / People Ops",
 ];
 
-const industries = [
-  "Technology / Software",
-  "Financial Services",
-  "Healthcare / Life Sciences",
-  "Manufacturing / Industrial",
-  "Retail / E-commerce",
-  "Professional Services",
-  "Media / Entertainment",
-  "Education",
-  "Real Estate / Construction",
-  "Other",
+interface IndustryOption {
+  label: string;
+  description?: string;
+}
+
+const industries: IndustryOption[] = [
+  { label: "Technology / Software" },
+  { label: "Financial Services" },
+  { label: "Healthcare / Life Sciences" },
+  { label: "Manufacturing / Industrial" },
+  { label: "Retail / E-commerce", description: "Online and physical retail" },
+  { label: "Professional Services" },
+  { label: "Media / Entertainment" },
+  { label: "Education" },
+  { label: "Real Estate / Construction" },
+  { label: "Other" },
 ];
 
 export default function OnboardingStep2() {
@@ -54,9 +60,10 @@ export default function OnboardingStep2() {
     );
   };
 
-  const toggleIndustry = (industry: string) => {
+  const toggleIndustry = (industry: IndustryOption) => {
+    const industryLabel = industry.label;
     setTargetIndustries((prev) =>
-      prev.includes(industry) ? prev.filter((i) => i !== industry) : [...prev, industry]
+      prev.includes(industryLabel) ? prev.filter((i) => i !== industryLabel) : [...prev, industryLabel]
     );
   };
 
@@ -80,9 +87,10 @@ export default function OnboardingStep2() {
 
   return (
     <Container className="py-12 sm:py-20">
+      <OnboardingProgress currentStep={2} />
+      
       <Reveal className="max-w-2xl mx-auto text-center mb-12">
-        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Step 2 of 3</p>
-        <h1 className="mt-4 font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
+        <h1 className="font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
           Who is your ideal customer?
         </h1>
         <p className="mt-4 text-lg leading-[1.6] text-body">
@@ -136,19 +144,20 @@ export default function OnboardingStep2() {
           <label className="block text-sm font-medium text-navy mb-3">Industries (select all that apply)</label>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {industries.map((industry) => (
-              <button
-                key={industry}
-                type="button"
-                onClick={() => toggleIndustry(industry)}
-                className={`rounded-lg border px-4 py-3 text-left transition-colors ${
-                  targetIndustries.includes(industry)
-                    ? "border-accent bg-accent/5 text-navy"
-                    : "border-line bg-white hover:border-accent hover:bg-white"
-                }`}
-              >
-                <p className="font-medium text-navy text-sm">{industry}</p>
-              </button>
-            ))}
+                <button
+                  key={industry.label}
+                  type="button"
+                  onClick={() => toggleIndustry(industry)}
+                  className={`rounded-lg border px-4 py-3 text-left transition-colors ${
+                    targetIndustries.includes(industry.label)
+                      ? "border-accent bg-accent/5 text-navy"
+                      : "border-line bg-white hover:border-accent hover:bg-white"
+                  }`}
+                >
+                  <p className="font-medium text-navy text-sm">{industry.label}</p>
+                  {industry.description && <p className="mt-1 text-xs text-muted">{industry.description}</p>}
+                </button>
+              ))}
           </div>
         </Reveal>
 

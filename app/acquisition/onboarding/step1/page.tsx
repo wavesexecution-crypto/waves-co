@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/button";
 import { Container, Section } from "@/components/container";
 import { Reveal } from "@/components/reveal";
+import { OnboardingProgress } from "../onboarding-progress";
 
 const businessTypes = [
   { id: "saas", label: "SaaS / Software", description: "Subscriptions, B2B software, developer tools" },
@@ -46,9 +47,10 @@ export default function OnboardingStep1() {
 
   return (
     <Container className="py-12 sm:py-20">
+      <OnboardingProgress currentStep={1} />
+      
       <Reveal className="max-w-2xl mx-auto text-center mb-12">
-        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Step 1 of 3</p>
-        <h1 className="mt-4 font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
+        <h1 className="font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
           What do you sell?
         </h1>
         <p className="mt-4 text-lg leading-[1.6] text-body">

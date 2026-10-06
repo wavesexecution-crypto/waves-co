@@ -94,6 +94,17 @@ export default async function RepliesPage({
   for (const r of replies) counts[categoryOf(r.replyStatus)] = (counts[categoryOf(r.replyStatus)] ?? 0) + 1;
   const visible = category === "all" ? replies : replies.filter((r) => categoryOf(r.replyStatus) === category);
 
+  // Primary action based on category
+  const primaryAction = (() => {
+    if (counts.interested > 0 && category === "interested") {
+      return { label: `Reply to ${counts.interested} interested`, href: "/acquisition/replies?category=interested" };
+    }
+    if (counts["follow-up"] > 0) {
+      return { label: `Follow up on ${counts["follow-up"]}`, href: "/acquisition/replies?category=follow-up" };
+    }
+    return { label: "View inbox", href: "/acquisition/replies" };
+  })();
+
   return (
     <Container className="py-8">
       {/* Header */}
@@ -105,16 +116,37 @@ export default async function RepliesPage({
               Your inbox
             </h1>
             <p className="mt-2 text-sm text-body">
-              {counts.interested} interested • {counts["not-interested"]} not interested
+              {counts.interested} interested · {counts["not-interested"]} not interested
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <Link href="/acquisition/outreach">
               <Button variant="secondary">← Outreach</Button>
             </Link>
             <Link href="/acquisition/results">
-              <Button variant="secondary">Results →</Button>
+              <Button variant="secondary">Reports →</Button>
             </Link>
+          </div>
+        </div>
+      </Reveal>
+
+      {/* Primary Action Banner */}
+      <Reveal className="mb-6">
+        <div className="rounded-lg border border-accent bg-accent/5 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Priority</p>
+              <h2 className="mt-1 font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy sm:text-[28px]">
+                {counts.interested > 0 ? `${counts.interested} interested prospects need your reply` : "No urgent replies"}
+              </h2>
+            </div>
+            {counts.interested > 0 && (
+              <Link href="/acquisition/replies?category=interested">
+                <Button size="lg" className="w-full sm:w-auto">
+                  Reply to interested
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </Reveal>
@@ -156,6 +188,16 @@ export default async function RepliesPage({
             <p className="mt-2 text-sm text-body">
               Replies will appear here when prospects respond to your outreach. Nothing is shown until a real reply is recorded.
             </p>
+            {counts.all === 0 && (
+              <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+                <Link href="/acquisition/outreach">
+                  <Button variant="secondary">Send outreach first</Button>
+                </Link>
+                <Link href="/acquisition/leads">
+                  <Button variant="secondary">Add prospects</Button>
+                </Link>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -208,8 +250,12 @@ function ReplyCard({ reply }: { reply: StoredReply }) {
           </span>
         </div>
 
+        {/* Actions prominently displayed */}
         <div className="lg:ml-8 flex flex-col gap-2">
           <FollowUpButton leadKey={reply.leadKey} business={reply.business} />
+          <Link href={`/acquisition/replies?category=${cat}#${reply.id}`}>
+            <Button variant="ghost" className="w-full">View thread</Button>
+          </Link>
         </div>
       </div>
     </div>

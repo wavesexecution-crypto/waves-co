@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { withTenantContext } from "@/lib/context";
 import { canCreateNotification } from "@/lib/authz";
 import {
   listNotifications,
@@ -30,14 +31,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid eventType" }, { status: 400 });
   }
 
-  const result = await listNotifications({
-    tenantId: session.user.tenantId,
-    userId: session.user.id,
-    unreadOnly,
-    limit,
-    offset,
-    eventType: eventType ?? undefined,
-  });
+  // Run inside the tenant context so RLS can see app.tenant_id.
+  const result = await withTenantContext(session.user.tenantId, () =>
+    listNotifications({
+      tenantId: session.user.tenantId as string,
+      userId: session.user.id,
+      unreadOnly,
+      limit,
+      offset,
+      eventType: eventType ?? undefined,
+    }),
+  );
 
   return NextResponse.json(result);
 }
@@ -62,14 +66,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid eventType" }, { status: 400 });
   }
 
-  const result = await createNotification({
-    tenantId: session.user.tenantId,
-    userId: session.user.id,
-    eventType: eventType as NotificationEventType,
-    cycleId,
-    campaignId,
-    context,
-  });
+  const result = await withTenantContext(session.user.tenantId, () =>
+    createNotification({
+      tenantId: session.user.tenantId as string,
+      userId: session.user.id,
+      eventType: eventType as NotificationEventType,
+      cycleId,
+      campaignId,
+      context,
+    }),
+  );
 
   return NextResponse.json(result);
 }

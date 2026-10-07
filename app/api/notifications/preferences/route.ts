@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { withTenantContext } from "@/lib/context";
 import {
   getPreferences,
   updatePreferences,
@@ -23,7 +24,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const preferences = await getPreferences(session.user.tenantId);
+  const preferences = await withTenantContext(session.user.tenantId, () =>
+    getPreferences(session.user.tenantId as string),
+  );
 
   return NextResponse.json({ preferences });
 }
@@ -68,7 +71,9 @@ export async function PUT(request: NextRequest) {
     });
   }
 
-  await updatePreferences(session.user.tenantId, updates);
+  await withTenantContext(session.user.tenantId, () =>
+    updatePreferences(session.user.tenantId as string, updates),
+  );
 
   return NextResponse.json({ success: true });
 }

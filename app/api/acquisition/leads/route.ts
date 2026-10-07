@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/context";
 import { requireCommercialAccess } from "@/lib/billing";
 import { LeadImportSchema, draftOutreachForLead, leadKeyForImport } from "@/lib/acquisition";
+import { onNotificationEvent } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -160,6 +161,17 @@ export async function POST(req: Request) {
         .catch(() => null);
       return { research, order, duplicate: !!existingOrder };
     });
+    // Real event: new draft outreach is waiting for review.
+    // Fired after the transaction commits (notification writes open their own
+    // tenant context, which must not nest inside this one).
+    if (!result.duplicate) {
+      onNotificationEvent(tenantId, "EMAILS_READY_FOR_REVIEW", {
+        userId,
+        prospectName: v.business,
+        deduplicationSuffix: `lead-${leadKeyForImport(v.business, v.email)}`,
+      });
+    }
+
     return NextResponse.json(result, { status: 201 });
   } catch (e: any) {
     if (e.message?.includes("UNAUTHORIZED")) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

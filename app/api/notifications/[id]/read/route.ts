@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { withTenantContext } from "@/lib/context";
 import { markNotificationRead } from "@/lib/notifications";
 
 export async function POST(
@@ -17,7 +18,11 @@ export async function POST(
 
   const { id } = await params;
 
-  const success = await markNotificationRead(session.user.tenantId, id);
+  // Tenant context satisfies RLS; the helper additionally scopes by tenantId,
+  // so a foreign notification id can never be marked read.
+  const success = await withTenantContext(session.user.tenantId, () =>
+    markNotificationRead(session.user.tenantId as string, id),
+  );
 
   return NextResponse.json({ success });
 }

@@ -74,6 +74,8 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (e: any) {
     if (e.message === "UNAUTHORIZED") return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    return NextResponse.json({ error: "internal", detail: e.message }, { status: 500 });
+    // Never leak ORM/database internals (table/column names, query text).
+    console.error("[trial/start] failed", { code: (e as any)?.code ?? "unknown" });
+    return NextResponse.json({ error: "internal", detail: "Could not start trial. Please retry." }, { status: 500 });
   }
 }

@@ -25,12 +25,18 @@ function toSignupErrorMessage(): string {
   return "Something went wrong creating your account. Please try again.";
 }
 
-function isSlugConflict(err: unknown): boolean {
-  const e = err as { code?: string; meta?: { target?: unknown } };
-  if (e?.code !== "P2002") return false;
-  const target = e?.meta?.target;
-  const fields = Array.isArray(target) ? target.map(String) : [String(target ?? "")];
-  return fields.includes("slug");
+/**
+ * True for any unique-violation, regardless of whether the driver populated
+ * `meta.target`. Production Postgres reports some unique-index violations
+ * with `target: null` (observed on Tenant.slug), so gating retries on target
+ * parsing silently disables the slug-suffix retry and turns every business
+ * name collision into a hard signup failure. Retrying with a fresh suffix is
+ * always safe here: tenant ids are random per attempt, and a (much rarer)
+ * concurrent duplicate-email just fails all attempts with the same clean
+ * generic error and creates nothing.
+ */
+function isRetryableConflict(err: unknown): boolean {
+  return (err as { code?: string })?.code === "P2002";
 }
 
 /**
@@ -78,7 +84,7 @@ async function createAccountAtomically(
       });
       return;
     } catch (e) {
-      if (isSlugConflict(e) && attempt < 2) continue;
+      if (isRetryableConflict(e) && attempt < 2) continue;
       throw e;
     }
   }

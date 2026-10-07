@@ -140,9 +140,30 @@ describe("server-trust boundaries", () => {
     expect(src).toMatch(/TRIAL_DAYS/);
   });
 
-  it("verify extends from current expiry and guards locked price", () => {
+  it("verify delegates price/lock enforcement to the shared integrity guard", () => {
+    // The locked-price, currency and amount checks moved into
+    // lib/entitlement.ts so the browser callback and the webhook cannot drift.
+    // The route must actually call it, not re-implement it.
     const src = read("app/api/billing/verify/route.ts");
-    expect(src).toMatch(/order\.amountPaise !== pricing\.paise/);
-    expect(src).toMatch(/current\?.status/);
+    expect(src).toMatch(/verifyLeaseIntegrity/);
+    expect(src).toMatch(/activateLeaseForPayment/);
+    // Still fail-closed on the two things only the route can know.
+    expect(src).toMatch(/Order tenant mismatch/);
+    expect(src).toMatch(/verifyRazorpaySignature/);
+    // It must never activate straight from the client's own payload.
+    expect(src).not.toMatch(/body\.amountPaise|body\.expiresAt|body\.tenantId/);
+  });
+
+  it("webhook is the authoritative recovery path for abandoned payments", () => {
+    const src = read("app/api/billing/razorpay/webhook/route.ts");
+    expect(src).toMatch(/x-razorpay-signature/);
+    expect(src).toMatch(/verifyWebhookSignature/);
+    expect(src).toMatch(/payment\.captured|refund\.processed/);
+    expect(src).toMatch(/verifyLeaseIntegrity/);
+    expect(src).toMatch(/activateLeaseForPayment/);
+    // Tenant from notes must be re-checked against the order's own tenantId.
+    expect(src).toMatch(/order\.tenantId !== tenantId/);
+    // Compare-and-set keeps a webhook + browser race to a single activation.
+    expect(src).toMatch(/paymentId: null/);
   });
 });

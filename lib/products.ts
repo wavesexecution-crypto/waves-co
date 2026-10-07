@@ -17,12 +17,12 @@ export const PRODUCTS: Product[] = [
     name: "Acquisition OS",
     tagline: "Find, qualify and contact your next customers",
     description:
-      "Acquisition OS researches your market, discovers and verifies prospects, scores them against your ideal customer, and runs personalised outreach — with a human approval gate before anything is ever sent.",
+      "Acquisition OS turns your business context into personalised outreach drafts for the prospects you bring in — with a human approval gate before anything is ever sent, and a readable record of every send.",
     highlights: [
-      "Market research and prospect discovery, run continuously",
+      "Contact validation and outreach drafting, run on your own brief",
       "Email verification and lead scoring against your ideal customer",
       "Personalised outreach you approve before a single email sends",
-      "Reply monitoring, follow-ups and a report you can read",
+      "Send history and a report you can read",
     ],
     href: "/products/acquisition-os",
   },

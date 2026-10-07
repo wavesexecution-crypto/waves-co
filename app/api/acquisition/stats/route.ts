@@ -24,8 +24,9 @@ export async function GET() {
         tx.outreachOrder.count({ where: { tenantId, status: { in: ["REJECTED", "CANCELLED"] } } }),
         tx.outreachOrder.count({ where: { tenantId, status: { in: ["SENT", "DELIVERED"] } } }),
         tx.outreachOrder.count({ where: { tenantId, status: "FAILED" } }),
-        tx.outreachEmail.count({ where: { tenantId, replyStatus: { not: null } } }),
-        tx.outreachEmail.count({ where: { tenantId, replyStatus: "INTERESTED" } }),
+        // replyStatus lives on OutreachOrder, not OutreachEmail (schema).
+        tx.outreachOrder.count({ where: { tenantId, replyStatus: { not: null } } }),
+        tx.outreachOrder.count({ where: { tenantId, replyStatus: "INTERESTED" } }),
         tx.followUp.count({ where: { tenantId, status: "pending" } }),
       ]);
       return buildStats({ ready, approved, rejected, sent, failed, replies, interested, followUpsPending });

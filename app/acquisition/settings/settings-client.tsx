@@ -95,29 +95,38 @@ export function SettingsClient({ user, tenantId, hasAccess }: SettingsClientProp
           </h2>
           <div className="rounded-lg border border-line bg-white p-6 space-y-4">
             <NotificationToggle
-              label="New leads found"
-              description="Get notified when Acquisition OS discovers new prospects"
-              enabled={true}
-            />
-            <NotificationToggle
               label="Emails ready for review"
               description="Know when new outreach emails need your approval"
               enabled={true}
             />
             <NotificationToggle
-              label="Replies received"
-              description="Instant notification when prospects respond"
+              label="Email connection issues"
+              description="Know when sending fails so you can retry"
               enabled={true}
+            />
+            <NotificationToggle
+              label="New leads found"
+              description="Not available yet — prospect discovery is manual"
+              enabled={false}
+              disabled
+            />
+            <NotificationToggle
+              label="Replies received"
+              description="Not available yet — inbound capture is not connected"
+              enabled={false}
+              disabled
             />
             <NotificationToggle
               label="Follow-ups due"
-              description="Reminder when it's time to follow up with prospects"
-              enabled={true}
+              description="Not available yet — follow-ups do not send automatically"
+              enabled={false}
+              disabled
             />
             <NotificationToggle
               label="Weekly report"
-              description="Summary of your acquisition activity every Monday"
+              description="Not available yet"
               enabled={false}
+              disabled
             />
           </div>
         </Section>
@@ -130,7 +139,7 @@ export function SettingsClient({ user, tenantId, hasAccess }: SettingsClientProp
             Target customer profile
           </h2>
           <p className="text-sm text-muted mb-6">
-            Update your ideal customer criteria. Changes apply to future searches.
+            Update your ideal customer criteria. Changes apply to future drafts.
           </p>
           <CustomerProfileForm />
         </Section>
@@ -348,8 +357,20 @@ function EraseWorkflowDataButton() {
   );
 }
 
-function NotificationToggle({ label, description, enabled }: { label: string; description: string; enabled: boolean }) {
+function NotificationToggle({ label, description, enabled, disabled }: { label: string; description: string; enabled: boolean; disabled?: boolean }) {
   const [isEnabled, setIsEnabled] = useState(enabled);
+
+  if (disabled) {
+    return (
+      <div className="flex items-center justify-between py-3 border-b border-line last:border-b-0 opacity-50">
+        <div>
+          <p className="font-medium text-navy">{label}</p>
+          <p className="text-sm text-muted">{description}</p>
+        </div>
+        <span className="px-2 py-1 rounded bg-navy/10 text-navy text-[10px] font-medium">Unavailable</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-between py-3 border-b border-line last:border-b-0">

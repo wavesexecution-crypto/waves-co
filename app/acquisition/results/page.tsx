@@ -281,16 +281,16 @@ export default async function ResultsPage() {
                 <p className="mt-1 text-sm text-muted">{results.interested} waiting for your response</p>
               </div>
             </Link>
-            <Link href="/acquisition/outreach">
+            <Link href="/acquisition/replies">
               <div className="rounded-lg border border-line p-5 hover:border-accent transition-colors">
-                <p className="font-medium text-navy">Send follow-ups</p>
-                <p className="mt-1 text-sm text-muted">Re-engage prospects who haven't replied</p>
+                <p className="font-medium text-navy">Log follow-ups</p>
+                <p className="mt-1 text-sm text-muted">Record the follow-ups you perform — nothing sends itself</p>
               </div>
             </Link>
             <Link href="/acquisition/leads">
               <div className="rounded-lg border border-line p-5 hover:border-accent transition-colors">
-                <p className="font-medium text-navy">Review new leads</p>
-                <p className="mt-1 text-sm text-muted">Acquisition OS finds new prospects daily</p>
+                <p className="font-medium text-navy">Review prospects</p>
+                <p className="mt-1 text-sm text-muted">Review the prospects you have added</p>
               </div>
             </Link>
             <Link href="/acquisition/billing">

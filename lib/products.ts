@@ -15,12 +15,12 @@ export const PRODUCTS: Product[] = [
   {
     slug: "acquisition-os",
     name: "Acquisition OS",
-    tagline: "Find, qualify and contact your next customers",
+    tagline: "Draft, approve and track outreach to your next customers",
     description:
       "Acquisition OS turns your business context into personalised outreach drafts for the prospects you bring in — with a human approval gate before anything is ever sent, and a readable record of every send.",
     highlights: [
       "Contact validation and outreach drafting, run on your own brief",
-      "Email verification and lead scoring against your ideal customer",
+      "Email format checks on every imported contact",
       "Personalised outreach you approve before a single email sends",
       "Send history and a report you can read",
     ],

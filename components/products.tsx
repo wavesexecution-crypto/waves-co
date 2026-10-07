@@ -14,7 +14,7 @@ export function Products() {
       <Reveal className="max-w-3xl">
         <Badge>The product</Badge>
         <h2 className="mt-6 font-heading text-[32px] font-semibold leading-[1.2] tracking-[-0.015em] text-navy sm:text-[40px]">
-          One product. It finds and wins you customers.
+          One product. You bring the prospects; it drafts, sends on your approval, and tracks.
         </h2>
         <p className="mt-6 max-w-2xl text-lg leading-[1.6] text-body">
           WAVES sells Acquisition OS. It is a complete system for outbound acquisition — not a bundle of separate

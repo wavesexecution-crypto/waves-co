@@ -26,17 +26,20 @@ export async function GET(req: Request) {
     }
 
     const result = await withTenantContext(tenantId, async (tx: any) => {
+      // replyStatus lives on OutreachOrder (not OutreachEmail) — see prisma
+      // schema. Querying the wrong model throws a Prisma validation error.
       const where: any = { tenantId, replyStatus: { not: null } };
-      const replies = await tx.outreachEmail.findMany({
+      const rows = await tx.outreachOrder.findMany({
         where,
         orderBy: { updatedAt: "desc" },
         take: 100,
         select: {
-          id: true, leadKey: true, business: true, email: true, subject: true,
+          id: true, leadKey: true, businessName: true, email: true, subject: true,
           body: true, status: true, replyStatus: true, sentAt: true,
           createdAt: true, updatedAt: true,
         },
       });
+      const replies = rows.map((r: any) => ({ ...r, business: r.businessName }));
       const filtered = category === "all" ? replies : replies.filter((r: any) => (r.replyStatus ?? "").toLowerCase().replace(/_/g, "-") === category);
       return { replies: filtered, total: replies.length, inboundConfigured: false };
     });

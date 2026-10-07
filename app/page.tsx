@@ -57,7 +57,7 @@ const solution = [
   },
   {
     title: "Import",
-    body: "Bring the prospects you already have in mind. Each contact is validated before it reaches your queue.",
+      body: "Bring the prospects you already have in mind. Each contact's email format is checked before it reaches your queue.",
   },
   {
     title: "Draft",
@@ -84,7 +84,7 @@ export default function Home() {
               Your business. Made easier.
             </h1>
             <p className="mt-8 max-w-2xl text-lg leading-[1.6] tracking-normal text-body">
-              WAVES handles the work behind your business, from finding customers to running day-to-day operations.
+              WAVES handles the work behind your business, from briefing your market to sending approved outreach.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Button href="/signup?from=proof">
@@ -165,8 +165,8 @@ export default function Home() {
             You approve. Acquisition OS sends.
           </p>
           <p className="mt-4 max-w-xl mx-auto text-body">
-            Nothing reaches a prospect without your explicit approval. The system does the searching, verifying,
-            scoring and drafting — you make the one decision that carries your reputation.
+            Nothing reaches a prospect without your explicit approval. The system drafts every message from your
+            brief and stored research — you make the one decision that carries your reputation.
           </p>
         </div>
       </Section>
@@ -190,20 +190,20 @@ export default function Home() {
         <div className="mt-12 grid gap-px bg-line md:grid-cols-2 xl:grid-cols-4">
           <Reveal>
             <article className="premium-card flex h-full flex-col rounded-sm bg-white p-8">
-              <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">discover</div>
-              <h3 className="mt-4 font-heading text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy sm:text-[22px]">
-                A researched prospect list
-              </h3>
-              <p className="mt-3 flex-grow text-sm leading-7 text-body">Businesses in your geography and category, matched to your ideal customer and scored.</p>
+                <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">import</div>
+                <h3 className="mt-4 font-heading text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy sm:text-[22px]">
+                  Your prospect list
+                </h3>
+                <p className="mt-3 flex-grow text-sm leading-7 text-body">The prospects you bring, with room for your research notes, organized for review.</p>
             </article>
           </Reveal>
           <Reveal delay={0.05}>
             <article className="premium-card flex h-full flex-col rounded-sm bg-white p-8">
-              <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">verify</div>
-              <h3 className="mt-4 font-heading text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy sm:text-[22px]">
-                Deliverable contact data
-              </h3>
-              <p className="mt-3 flex-grow text-sm leading-7 text-body">Each contact is validated before it is queued, so invalid addresses never reach your approval queue.</p>
+                <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">check</div>
+                <h3 className="mt-4 font-heading text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy sm:text-[22px]">
+                  Checked contact data
+                </h3>
+                <p className="mt-3 flex-grow text-sm leading-7 text-body">Each contact&apos;s email format is checked before it is queued, so malformed addresses never reach your approval queue.</p>
             </article>
           </Reveal>
           <Reveal delay={0.1}>
@@ -251,8 +251,8 @@ export default function Home() {
               See it work on your business first.
             </h2>
             <p className="mt-6 max-w-xl text-lg leading-[1.6] text-body">
-              Start the 2-Day Proof. Describe your market and offer, and Acquisition OS researches it and produces a
-              real prospect list and drafted outreach — before you pay anything.
+              Start the 2-Day Proof. Describe your market and offer, add your prospects, and Acquisition OS drafts
+              outreach for each — before you pay anything.
             </p>
           </div>
           <Button href="/signup?from=proof" className="w-fit">

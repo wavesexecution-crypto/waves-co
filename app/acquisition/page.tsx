@@ -58,21 +58,21 @@ export default async function AcquisitionHome() {
 
   // Real counts from stored rows (zeros are honest for new workspaces).
   let todayStats = {
-    customersFound: 0,
+    prospectsAdded: 0,
     emailsSent: 0,
     replies: 0,
     interested: 0,
-    meetings: 0,
+    followUpsPending: 0,
   };
   if (tenantId) {
     try {
       const s = await fetchTenantStats(tenantId);
       todayStats = {
-        customersFound: s.leadsTotal,
+        prospectsAdded: s.leadsTotal,
         emailsSent: s.emailsSent,
         replies: s.replies,
         interested: s.interested,
-        meetings: s.followUpsPending,
+        followUpsPending: s.followUpsPending,
       };
     } catch {
       // Keep honest zeros on load failure.
@@ -81,12 +81,12 @@ export default async function AcquisitionHome() {
 
   // Determine the primary next step based on state
   const primaryAction = (() => {
-    if (!tenantId) return { label: "Start 2-Day Proof", href: "/acquisition/onboarding", description: "Set up your business and start finding customers" };
+    if (!tenantId) return { label: "Start 2-Day Proof", href: "/acquisition/onboarding", description: "Set up your business and add your first prospects" };
     if (!hasAccess) return { label: "Start 2-Day Proof", href: "/acquisition/onboarding", description: "Activate your free trial to unlock the system" };
     
     // Has access - check what needs attention
-    if (todayStats.customersFound > 0 && todayStats.emailsSent === 0) {
-      return { label: "Review leads", href: "/acquisition/leads", description: `${todayStats.customersFound} customers waiting for your decision` };
+    if (todayStats.prospectsAdded > 0 && todayStats.emailsSent === 0) {
+      return { label: "Review leads", href: "/acquisition/leads", description: `${todayStats.prospectsAdded} prospects waiting for your decision` };
     }
     if (todayStats.emailsSent > 0 && todayStats.replies === 0) {
       return { label: "Check replies", href: "/acquisition/replies", description: `${todayStats.emailsSent} emails sent, waiting for responses` };
@@ -110,7 +110,7 @@ export default async function AcquisitionHome() {
             <h1 className="font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
               Acquisition OS
             </h1>
-            <p className="mt-2 text-sm text-body">Your command center for finding and winning customers.</p>
+            <p className="mt-2 text-sm text-body">Your command center for approved outreach to your prospects.</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.14em] text-accent bg-accent/10 px-2 py-0.5 rounded">
@@ -179,7 +179,7 @@ export default async function AcquisitionHome() {
       )}
 
       {/* Today's Activity - Only if has access and data */}
-      {tenantId && hasAccess && (todayStats.customersFound > 0 || todayStats.emailsSent > 0 || todayStats.replies > 0) && (
+      {tenantId && hasAccess && (todayStats.prospectsAdded > 0 || todayStats.emailsSent > 0 || todayStats.replies > 0) && (
         <Reveal delay={0.15} className="mb-8">
           <Section className="py-0">
             <div className="flex items-center justify-between mb-4">
@@ -191,11 +191,11 @@ export default async function AcquisitionHome() {
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <StatCard label="Customers found" value={todayStats.customersFound} icon={<UsersIcon />} />
+              <StatCard label="Prospects added" value={todayStats.prospectsAdded} icon={<UsersIcon />} />
               <StatCard label="Emails sent" value={todayStats.emailsSent} icon={<MailIcon />} />
               <StatCard label="Replies" value={todayStats.replies} icon={<ReplyIcon />} />
               <StatCard label="Interested" value={todayStats.interested} icon={<HeartIcon />} />
-              <StatCard label="Follow-ups" value={todayStats.meetings} icon={<CalendarIcon />} />
+              <StatCard label="Follow-ups pending" value={todayStats.followUpsPending} icon={<CalendarIcon />} />
             </div>
           </Section>
         </Reveal>
@@ -207,7 +207,7 @@ export default async function AcquisitionHome() {
           <QuickLink
             href="/acquisition/leads"
             label="Leads"
-            description="Review and approve customers"
+            description="Review and approve prospects"
             disabled={!tenantId || !hasAccess}
             icon={<UsersIcon />}
           />

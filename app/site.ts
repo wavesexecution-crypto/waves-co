@@ -5,7 +5,7 @@ export const siteConfig = {
   name: "WAVES",
   title: "WAVES | Your business. Made easier.",
   description:
-    "WAVES handles the work behind your business, from finding customers to running day-to-day operations.",
+    "WAVES handles the work behind your business, from briefing your market to sending approved outreach.",
   url: siteUrl,
   ogImage: `${siteUrl}/og-image.png`,
 };

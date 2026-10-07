@@ -155,8 +155,8 @@ export default async function BillingPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <FeatureCard
               icon={<SearchIcon />}
-              title="Find customers"
-              description="Market research, prospect discovery, and lead scoring"
+              title="Add prospects"
+              description="Import prospects manually with email format checks and drafted outreach"
             />
             <FeatureCard
               icon={<MailIcon />}
@@ -165,8 +165,8 @@ export default async function BillingPage() {
             />
             <FeatureCard
               icon={<ReplyIcon />}
-              title="Reply handling"
-              description="Inbox for responses, follow-ups, and meeting scheduling"
+              title="Reply tracking"
+              description="Record inbox replies and schedule manual follow-ups — nothing sends itself"
             />
             <FeatureCard
               icon={<FileTextIcon />}

@@ -2,15 +2,18 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/context";
 import { requireCommercialAccess } from "@/lib/billing";
-import { FollowUpCreateSchema } from "@/lib/acquisition";
+import { FollowUpCreateSchema, FollowUpUpdateSchema } from "@/lib/acquisition";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/acquisition/followups — own tenant's follow-ups (pending first).
  * POST /api/acquisition/followups — schedule one for an own order/lead.
+ * PATCH /api/acquisition/followups — complete or cancel one ({ id, action }).
  * Follow-up state persists; completing/cancelling is explicit. Duplicate
  * scheduling for the same order+due-day returns the existing row.
+ * Follow-ups never send automatically — completion only records that the
+ * owner did the follow-up outside the system.
  */
 export async function GET() {
   try {
@@ -106,3 +109,54 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "internal", detail: "Could not schedule follow-up. Please retry." }, { status: 500 });
   }
 }
+
+/**
+ * PATCH /api/acquisition/followups — explicitly complete or cancel one.
+ * Body: { id, action: "complete" | "cancel" }. Tenant-scoped; terminal rows
+ * are idempotent (returns reused:true). Completing only records that the
+ * owner performed the follow-up — nothing is sent automatically.
+ */
+export async function PATCH(req: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user?.tenantId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    const tenantId = session.user.tenantId as string;
+    const userId = (session.user as any).id as string | undefined;
+
+    const body = await req.json().catch(() => ({}));
+    const parsed = FollowUpUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid follow-up update", issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) },
+        { status: 400 },
+      );
+    }
+
+    await requireCommercialAccess(tenantId);
+
+    const result = await withTenantContext(tenantId, async (tx: any) => {
+      const row = await tx.followUp.findFirst({ where: { id: parsed.data.id, tenantId } });
+      if (!row) return { error: "Follow-up not found", status: 404 };
+      const to = parsed.data.action === "complete" ? "completed" : "cancelled";
+      if (row.status === to) return { followup: row, reused: true };
+      if (row.status === "completed" || row.status === "cancelled") {
+        return { error: `Follow-up is already ${row.status}`, status: 409 };
+      }
+      const updated = await tx.followUp.update({
+        where: { id: row.id },
+        data: { status: to, completedAt: new Date() },
+      });
+      await tx.auditLog
+        .create({ data: { tenantId, userId, action: "acquisition.followup.update", model: "FollowUp", recordId: row.id, after: { status: to } } })
+        .catch(() => null);
+      return { followup: updated };
+    });
+    if ((result as any).error) return NextResponse.json({ error: (result as any).error }, { status: (result as any).status ?? 400 });
+    return NextResponse.json(result);
+  } catch (e: any) {
+    if (e.message?.includes("UNAUTHORIZED")) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    if ((e as any).status === 402) return NextResponse.json({ error: "ENTITLEMENT_REQUIRED", detail: "Active trial or lease required." }, { status: 402 });
+    return NextResponse.json({ error: "internal", detail: "Could not update follow-up. Please retry." }, { status: 500 });
+  }
+}
+

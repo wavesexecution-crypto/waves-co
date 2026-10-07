@@ -7,7 +7,7 @@ describe("renderNotificationEmail", () => {
       title: "Lead Report Ready",
       message: "Your Lead Intelligence Report is ready to review.",
       eventType: "LEAD_REPORT_READY",
-      actionHref: "/acquisition/cycles/c1/report",
+      actionHref: "/acquisition/results",
       actionLabel: "View Report",
     });
 
@@ -16,7 +16,7 @@ describe("renderNotificationEmail", () => {
     expect(html).toContain("Lead Report Ready");
     expect(html).toContain("Your Lead Intelligence Report is ready to review.");
     expect(html).toContain("View Report");
-    expect(html).toContain("/acquisition/cycles/c1/report");
+    expect(html).toContain("/acquisition/results");
   });
 
   it("renders metadata context lines when present", () => {

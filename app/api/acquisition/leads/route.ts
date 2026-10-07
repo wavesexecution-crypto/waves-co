@@ -4,6 +4,7 @@ import { withTenantContext } from "@/lib/context";
 import { requireCommercialAccess } from "@/lib/billing";
 import { LeadImportSchema, draftOutreachForLead, leadKeyForImport } from "@/lib/acquisition";
 import { onNotificationEvent } from "@/lib/notifications";
+import { clientIpFromHeaders, consumeRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +107,15 @@ export async function POST(req: Request) {
       );
     }
     const v = parsed.data;
+
+    // Bulk import is an abuse surface (list bombing) — shape it per tenant+IP.
+    const importLimit = consumeRateLimit(`${tenantId}:${clientIpFromHeaders(req.headers)}`, "outreach");
+    if (!importLimit.allowed) {
+      return NextResponse.json(
+        { error: "rate_limited", detail: "Too many import requests. Please wait and retry." },
+        { status: 429, headers: rateLimitHeaders(importLimit) },
+      );
+    }
 
     // Gate outside the transaction (see GET above for why).
     await requireCommercialAccess(tenantId);

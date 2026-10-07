@@ -78,14 +78,18 @@ export default async function RepliesPage({
   let loadError: string | null = null;
   try {
     await requireCommercialAccess(tenantId);
-    replies = await withTenantContext(tenantId, async (tx: any) =>
-      tx.outreachEmail.findMany({
-        where: { tenantId, replyStatus: { not: null } },
-        orderBy: { updatedAt: "desc" },
-        take: 100,
-        select: { id: true, leadKey: true, business: true, email: true, subject: true, body: true, replyStatus: true, updatedAt: true },
-      }),
+    // replyStatus lives on OutreachOrder, not OutreachEmail (schema).
+    const rows = await withTenantContext(
+      tenantId,
+      async (tx: any) =>
+        tx.outreachOrder.findMany({
+          where: { tenantId, replyStatus: { not: null } },
+          orderBy: { updatedAt: "desc" },
+          take: 100,
+          select: { id: true, leadKey: true, businessName: true, email: true, subject: true, body: true, replyStatus: true, updatedAt: true },
+        }),
     );
+    replies = rows.map((r: any) => ({ ...r, business: r.businessName }));
   } catch (e: any) {
     loadError = (e as any)?.status === 402 ? "Your proof or lease expired." : "Could not load replies. Please refresh to retry.";
   }

@@ -112,7 +112,7 @@ export function draftOutreachForLead(input: {
         ? `Noticed ${input.businessName} — ${opp}`
         : `Came across ${input.businessName} and thought this might be relevant.`,
       ``,
-      `${input.companyName} helps teams like yours find and win customers without manual prospecting.`,
+      `${input.companyName} helps teams like yours reach the prospects you have already identified.`,
       ``,
       `Open to a 15-minute call to see if this fits?`,
     ].join("\n"),
@@ -154,6 +154,13 @@ export const FollowUpCreateSchema = z.object({
 });
 
 export type FollowUpCreate = z.infer<typeof FollowUpCreateSchema>;
+
+export const FollowUpUpdateSchema = z.object({
+  id: z.string().min(1).max(100),
+  action: z.enum(["complete", "cancel"]),
+});
+
+export type FollowUpUpdate = z.infer<typeof FollowUpUpdateSchema>;
 
 // ─── Stats (truthful aggregation over stored rows) ──────────────────────
 
@@ -275,8 +282,9 @@ export async function fetchTenantStats(tenantId: string): Promise<AcquisitionSta
       tx.outreachOrder.count({ where: { tenantId, status: { in: ["REJECTED", "CANCELLED"] } } }),
       tx.outreachOrder.count({ where: { tenantId, status: { in: ["SENT", "DELIVERED"] } } }),
       tx.outreachOrder.count({ where: { tenantId, status: "FAILED" } }),
-      tx.outreachEmail.count({ where: { tenantId, replyStatus: { not: null } } }),
-      tx.outreachEmail.count({ where: { tenantId, replyStatus: "INTERESTED" } }),
+      // replyStatus lives on OutreachOrder, not OutreachEmail (schema).
+      tx.outreachOrder.count({ where: { tenantId, replyStatus: { not: null } } }),
+      tx.outreachOrder.count({ where: { tenantId, replyStatus: "INTERESTED" } }),
       tx.followUp.count({ where: { tenantId, status: "pending" } }),
     ]);
     return buildStats({ ready, approved, rejected, sent, failed, replies, interested, followUpsPending });

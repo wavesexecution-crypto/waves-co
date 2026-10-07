@@ -95,20 +95,20 @@ describe("resolveNotificationContent", () => {
 });
 
 describe("resolveResourceHref", () => {
-  it("links lead report to cycle report path", () => {
+  it("links lead report to the results page (no dead cycle path)", () => {
     const href = resolveResourceHref(
       NOTIFICATION_EVENT_TYPES.LEAD_REPORT_READY,
       { cycleId: "cycle-1" },
     );
-    expect(href).toContain("/acquisition/cycles/cycle-1/report");
+    expect(href).toBe("/acquisition/results");
   });
 
-  it("links campaign deployed to campaign path", () => {
+  it("links campaign deployed to the outreach page (no dead campaign path)", () => {
     const href = resolveResourceHref(
       NOTIFICATION_EVENT_TYPES.CAMPAIGN_DEPLOYED,
       { campaignId: "cam-1" },
     );
-    expect(href).toContain("/acquisition/campaigns/cam-1");
+    expect(href).toBe("/acquisition/outreach");
   });
 
   it("returns null for error notifications without a resource", () => {
@@ -119,12 +119,23 @@ describe("resolveResourceHref", () => {
     expect(href).toBeNull();
   });
 
-  it("links responses to campaign responses path", () => {
+  it("links responses to the replies page (no dead campaign path)", () => {
     const href = resolveResourceHref(
       NOTIFICATION_EVENT_TYPES.NEW_RESPONSES_DETECTED,
       { campaignId: "cam-1" },
     );
-    expect(href).toContain("/acquisition/campaigns/cam-1/responses");
+    expect(href).toBe("/acquisition/replies");
+  });
+
+  it("never links to routes that do not exist", async () => {
+    const { NOTIFICATION_TEMPLATES } = await import("@/lib/notifications/types");
+    const dead = ["/campaigns", "/cycles/", "campaigns/", "/responses", "/follow-ups", "/emails", "/reports"];
+    for (const [name, tpl] of Object.entries(NOTIFICATION_TEMPLATES)) {
+      const fn = (tpl as any).resourceHref;
+      if (typeof fn !== "function") continue;
+      const href = fn({ campaignId: "cam-1", cycleId: "cycle-1" });
+      for (const d of dead) expect(`${name}:${href}`).not.toContain(d);
+    }
   });
 });
 

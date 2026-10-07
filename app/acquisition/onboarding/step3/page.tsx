@@ -144,10 +144,10 @@ export default function OnboardingStep3() {
           <Sparkles size={32} className="text-accent" />
         </div>
         <h1 className="font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
-          Ready to find customers
+          Start your 2-day proof
         </h1>
         <p className="mt-4 text-lg leading-[1.6] text-body">
-          We&apos;ll search for companies matching your criteria and score them against your ideal customer profile.
+          We&apos;ll save your business context and start your 2-day proof. Then you add your first prospects.
         </p>
       </Reveal>
 
@@ -172,10 +172,10 @@ export default function OnboardingStep3() {
                 <Search size={24} className="text-accent animate-spin" />
               </div>
               <h3 className="font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy">
-                Searching for customers…
+                Starting your proof…
               </h3>
               <p className="mt-2 text-sm text-body">
-                This usually takes 1-2 minutes. We&apos;ll find and score companies that match your ideal customer.
+                Saving your business context and starting your 2-day proof. Next: add your first prospects.
               </p>
               <div className="mt-6 h-2 bg-line rounded-full overflow-hidden">
                 <div

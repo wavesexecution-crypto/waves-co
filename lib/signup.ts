@@ -68,7 +68,12 @@ async function createAccountAtomically(
           data: { id: tenantId, name: tenantName, slug },
         });
         await tx.user.create({
-          data: { id: userId, tenantId, email, name: name || null, passwordHash, role: "owner", status: "active", emailVerified: new Date() },
+          // emailVerified stays null: there is no verification-mail flow yet
+          // (requires the email provider key), so signup must NOT assert a
+          // verified address. Nothing in the codebase treats this field as
+          // proof; trial-farming defense rests on signup rate limits,
+          // duplicate-email rejection, and single-use trial entitlements.
+          data: { id: userId, tenantId, email, name: name || null, passwordHash, role: "owner", status: "active", emailVerified: null },
         });
       });
       return;

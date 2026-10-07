@@ -196,7 +196,7 @@ export default function OnboardingStep2() {
               Back
             </Button>
             <Button type="submit" disabled={pending || !companySize || targetRoles.length === 0} className="w-full sm:w-auto flex-1" size="lg">
-              {pending ? "Starting search…" : "Find customers"}
+              {pending ? "Saving…" : "Continue"}
             </Button>
           </div>
         </Reveal>

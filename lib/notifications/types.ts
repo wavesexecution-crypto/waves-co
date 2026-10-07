@@ -127,8 +127,9 @@ export const NOTIFICATION_TEMPLATES: Record<
   CYCLE_STARTED: {
     title: "Acquisition Cycle Started",
     message: "Acquisition OS has started working on your cycle.",
-    resourceHref: (ctx) =>
-      ctx.cycleId ? `/acquisition/cycles/${ctx.cycleId}` : "/acquisition",
+    // NOTE: only pages that exist may be linked (no /cycles, /campaigns,
+    // /reports, /responses, /follow-ups, /emails routes exist).
+    resourceHref: () => "/acquisition",
   },
   LEAD_GENERATION_COMPLETED: {
     title: "Lead Generation Complete",
@@ -138,18 +139,12 @@ export const NOTIFICATION_TEMPLATES: Record<
       }
       return "Your lead research is complete. Your qualified leads are ready.";
     },
-    resourceHref: (ctx) =>
-      ctx.cycleId
-        ? `/acquisition/cycles/${ctx.cycleId}/leads`
-        : "/acquisition/leads",
+    resourceHref: () => "/acquisition/leads",
   },
   LEAD_REPORT_READY: {
     title: "Lead Report Ready",
     message: "Your Lead Intelligence Report is ready to review.",
-    resourceHref: (ctx) =>
-      ctx.cycleId
-        ? `/acquisition/cycles/${ctx.cycleId}/report`
-        : "/acquisition/reports",
+    resourceHref: () => "/acquisition/results",
   },
   EMAILS_READY_FOR_REVIEW: {
     title: "Emails Ready for Review",
@@ -159,18 +154,12 @@ export const NOTIFICATION_TEMPLATES: Record<
       }
       return "Your personalized outreach emails are ready for review.";
     },
-    resourceHref: (ctx) =>
-      ctx.campaignId
-        ? `/acquisition/campaigns/${ctx.campaignId}/emails`
-        : "/acquisition/campaigns",
+    resourceHref: () => "/acquisition/outreach",
   },
   CAMPAIGN_DEPLOYED: {
     title: "Campaign Deployed",
     message: "Your approved outreach campaign has been deployed.",
-    resourceHref: (ctx) =>
-      ctx.campaignId
-        ? `/acquisition/campaigns/${ctx.campaignId}`
-        : "/acquisition/campaigns",
+    resourceHref: () => "/acquisition/outreach",
   },
   NEW_RESPONSES_DETECTED: {
     title: "New Responses Detected",
@@ -180,10 +169,7 @@ export const NOTIFICATION_TEMPLATES: Record<
       }
       return "New responses have arrived from your outreach campaign.";
     },
-    resourceHref: (ctx) =>
-      ctx.campaignId
-        ? `/acquisition/campaigns/${ctx.campaignId}/responses`
-        : "/acquisition/responses",
+    resourceHref: () => "/acquisition/replies",
   },
   POSITIVE_RESPONSE_DETECTED: {
     title: "Positive Response Detected",
@@ -193,42 +179,27 @@ export const NOTIFICATION_TEMPLATES: Record<
       }
       return "A prospect has shown positive interest in your outreach.";
     },
-    resourceHref: (ctx) =>
-      ctx.campaignId
-        ? `/acquisition/campaigns/${ctx.campaignId}/responses`
-        : "/acquisition/responses",
+    resourceHref: () => "/acquisition/replies",
   },
   FOLLOW_UP_READY: {
     title: "Follow-up Ready",
     message: "Follow-ups are ready for your review.",
-    resourceHref: (ctx) =>
-      ctx.campaignId
-        ? `/acquisition/campaigns/${ctx.campaignId}/follow-ups`
-        : "/acquisition/follow-ups",
+    resourceHref: () => "/acquisition/replies",
   },
   FOLLOW_UP_WINDOW_COMPLETED: {
     title: "Follow-up Window Completed",
     message: "The follow-up response window has ended.",
-    resourceHref: (ctx) =>
-      ctx.campaignId
-        ? `/acquisition/campaigns/${ctx.campaignId}`
-        : "/acquisition/campaigns",
+    resourceHref: () => "/acquisition/results",
   },
   CAMPAIGN_RESULTS_FINALIZED: {
     title: "Campaign Results Finalized",
     message: "Your campaign results have been finalized.",
-    resourceHref: (ctx) =>
-      ctx.campaignId
-        ? `/acquisition/campaigns/${ctx.campaignId}/results`
-        : "/acquisition/results",
+    resourceHref: () => "/acquisition/results",
   },
   CYCLE_REPORT_READY: {
     title: "Cycle 1 Report Ready",
     message: "Your complete Cycle 1 acquisition report is ready.",
-    resourceHref: (ctx) =>
-      ctx.cycleId
-        ? `/acquisition/cycles/${ctx.cycleId}/report`
-        : "/acquisition/reports",
+    resourceHref: () => "/acquisition/results",
   },
   STORAGE_CONNECTION_ERROR: {
     title: "Storage Connection Requires Attention",
@@ -244,9 +215,6 @@ export const NOTIFICATION_TEMPLATES: Record<
     title: "Campaign Could Not Continue",
     message:
       "Your campaign has been paused due to an issue. Please review and take action.",
-    resourceHref: (ctx) =>
-      ctx.campaignId
-        ? `/acquisition/campaigns/${ctx.campaignId}`
-        : "/acquisition/campaigns",
+    resourceHref: () => "/acquisition/outreach",
   },
 };

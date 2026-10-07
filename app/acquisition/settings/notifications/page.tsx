@@ -7,13 +7,16 @@ import { Reveal } from "@/components/reveal";
 import Link from "next/link";
 
 export default function NotificationsSettingsPage() {
+  // Only events the system actually produces are toggleable. Everything else
+  // is shown disabled so preferences never promise what cannot happen.
   const [notifications, setNotifications] = useState([
-    { id: "new-leads", label: "New leads found", description: "Get notified when Acquisition OS discovers new prospects", enabled: true },
-    { id: "emails-ready", label: "Emails ready for review", description: "Know when new outreach emails need your approval", enabled: true },
-    { id: "replies", label: "Replies received", description: "Requires inbound capture, which is not connected yet", enabled: true },
-    { id: "followups", label: "Follow-ups due", description: "Reminder when it's time to follow up with prospects", enabled: true },
-    { id: "weekly-report", label: "Weekly report", description: "Summary of your acquisition activity every Monday", enabled: false },
-    { id: "cycle-complete", label: "Cycle complete", description: "Notification when an acquisition cycle finishes", enabled: true },
+    { id: "emails-ready", label: "Emails ready for review", description: "Know when new outreach emails need your approval", enabled: true, available: true },
+    { id: "email-errors", label: "Email connection issues", description: "Know when sending fails so you can retry", enabled: true, available: true },
+    { id: "new-leads", label: "New leads found", description: "Not available yet — prospect discovery is manual", enabled: false, available: false },
+    { id: "replies", label: "Replies received", description: "Not available yet — inbound capture is not connected", enabled: false, available: false },
+    { id: "followups", label: "Follow-ups due", description: "Not available yet — follow-ups do not send automatically", enabled: false, available: false },
+    { id: "weekly-report", label: "Weekly report", description: "Not available yet", enabled: false, available: false },
+    { id: "cycle-complete", label: "Cycle complete", description: "Not available yet", enabled: false, available: false },
   ]);
 
   const [channels, setChannels] = useState({
@@ -62,6 +65,7 @@ export default function NotificationsSettingsPage() {
                 label={notification.label}
                 description={notification.description}
                 enabled={notification.enabled}
+                disabled={!notification.available}
                 onChange={(enabled) => toggleNotification(notification.id)}
               />
             ))}
@@ -83,56 +87,20 @@ export default function NotificationsSettingsPage() {
               onChange={() => toggleChannel("inApp")}
               required
             />
-            <ChannelToggle
-              label="Email"
-              description="Notifications sent to your email address"
-              enabled={channels.email}
-              onChange={() => toggleChannel("email")}
-            />
-            <ChannelToggle
-              label="Push"
-              description="Push notifications to your device (requires browser permission)"
-              enabled={channels.push}
-              onChange={() => toggleChannel("push")}
-            />
-          </div>
-        </Section>
-      </Reveal>
-
-      {/* Quiet Hours */}
-      <Reveal delay={0.15}>
-        <Section className="py-0">
-          <h2 className="font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy mb-6">
-            Quiet hours
-          </h2>
-          <p className="text-sm text-muted mb-6">
-            Suppress notifications during specific hours (uses your local timezone)
-          </p>
-          <div className="rounded-lg border border-line bg-white p-6 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between py-3 border-b border-line last:border-b-0 opacity-50">
               <div>
-                <p className="font-medium text-navy">Enable quiet hours</p>
-                <p className="text-sm text-muted">No notifications during selected hours</p>
+                <p className="font-medium text-navy">Email</p>
+                <p className="text-sm text-muted">Not sent today — notifications are in-app only for now</p>
               </div>
-              <button
-                className="relative inline-flex h-6 w-11 items-center rounded-full bg-line transition-colors"
-                role="switch"
-                aria-checked={false}
-              >
-                <span className="inline-block h-4 w-4 transform rounded-full bg-white translate-x-1 transition-transform" />
-              </button>
+              <span className="px-2 py-1 rounded bg-navy/10 text-navy text-[10px] font-medium">Unavailable</span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 pt-4 border-t border-line">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-navy">Start time</label>
-                <input type="time" defaultValue="22:00" className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy" />
+            <div className="flex items-center justify-between py-3 border-b border-line last:border-b-0 opacity-50">
+              <div>
+                <p className="font-medium text-navy">Push</p>
+                <p className="text-sm text-muted">Not available yet</p>
               </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-navy">End time</label>
-                <input type="time" defaultValue="08:00" className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy focus:ring-1 focus:ring-navy" />
-              </div>
+              <span className="px-2 py-1 rounded bg-navy/10 text-navy text-[10px] font-medium">Unavailable</span>
             </div>
-            <Button>Save quiet hours</Button>
           </div>
         </Section>
       </Reveal>
@@ -140,8 +108,20 @@ export default function NotificationsSettingsPage() {
   );
 }
 
-function NotificationToggle({ label, description, enabled, onChange }: { label: string; description: string; enabled: boolean; onChange: (enabled: boolean) => void }) {
+function NotificationToggle({ label, description, enabled, disabled, onChange }: { label: string; description: string; enabled: boolean; disabled?: boolean; onChange: (enabled: boolean) => void }) {
   const [isEnabled, setIsEnabled] = useState(enabled);
+
+  if (disabled) {
+    return (
+      <div className="flex items-center justify-between py-3 border-b border-line last:border-b-0 opacity-50">
+        <div className="flex-1 pr-4">
+          <p className="font-medium text-navy">{label}</p>
+          <p className="text-sm text-muted">{description}</p>
+        </div>
+        <span className="px-2 py-1 rounded bg-navy/10 text-navy text-[10px] font-medium">Unavailable</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-between py-3 border-b border-line last:border-b-0">

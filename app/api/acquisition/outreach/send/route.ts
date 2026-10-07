@@ -5,6 +5,7 @@ import { withTenantContext } from "@/lib/context";
 import { requireCommercialAccess } from "@/lib/billing";
 import { deliverEmail } from "@/lib/email-send";
 import { onNotificationEvent } from "@/lib/notifications";
+import { clientIpFromHeaders, consumeRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +88,15 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const orderId = typeof body.orderId === "string" ? body.orderId : "";
     if (!orderId) return NextResponse.json({ error: "orderId is required" }, { status: 400 });
+
+    // Sending hits an external provider per call — shape bulk/retry abuse.
+    const sendLimit = consumeRateLimit(`${tenantId}:${clientIpFromHeaders(req.headers)}`, "outreach");
+    if (!sendLimit.allowed) {
+      return NextResponse.json(
+        { error: "rate_limited", detail: "Too many send requests. Please wait and retry." },
+        { status: 429, headers: rateLimitHeaders(sendLimit) },
+      );
+    }
 
     await requireCommercialAccess(tenantId);
 

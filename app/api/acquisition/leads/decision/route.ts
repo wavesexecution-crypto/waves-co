@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/context";
 import { requireCommercialAccess } from "@/lib/billing";
 import { LeadDecisionSchema, validateOrderTransition } from "@/lib/acquisition";
+import { clientIpFromHeaders, consumeRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,15 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Invalid decision", issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) },
         { status: 400 },
+      );
+    }
+
+    // Decision flips are cheap but state-changing — shape automated abuse.
+    const decisionLimit = consumeRateLimit(`${tenantId}:${clientIpFromHeaders(req.headers)}`, "outreach");
+    if (!decisionLimit.allowed) {
+      return NextResponse.json(
+        { error: "rate_limited", detail: "Too many decision requests. Please wait and retry." },
+        { status: 429, headers: rateLimitHeaders(decisionLimit) },
       );
     }
 

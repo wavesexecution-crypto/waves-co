@@ -88,7 +88,7 @@ export default async function LeadsPage({
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Leads</p>
             <h1 className="mt-2 font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
-              Review your customers
+              Review your prospects
             </h1>
             <p className="mt-2 text-sm text-body">
               {counts.ready} waiting for your decision

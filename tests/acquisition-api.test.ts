@@ -21,11 +21,12 @@ import { GET as profileGET, PUT as profilePUT } from "@/app/api/acquisition/prof
 import { GET as leadsGET, POST as leadsPOST } from "@/app/api/acquisition/leads/route";
 import { POST as decidePOST } from "@/app/api/acquisition/leads/decision/route";
 import { POST as sendPOST } from "@/app/api/acquisition/outreach/send/route";
-import { GET as fuGET, POST as fuPOST } from "@/app/api/acquisition/followups/route";
+import { GET as fuGET, POST as fuPOST, PATCH as fuPATCH } from "@/app/api/acquisition/followups/route";
 import { GET as statsGET } from "@/app/api/acquisition/stats/route";
 import { DELETE as eraseDELETE } from "@/app/api/acquisition/account/route";
 import { GET as repliesGET } from "@/app/api/acquisition/replies/route";
 import { GET as outreachGET } from "@/app/api/acquisition/outreach/route";
+import { __resetRateLimits } from "@/lib/rate-limit";
 
 const SESSION = { user: { id: "u1", tenantId: "t1", role: "owner", email: "o@t.co" } };
 
@@ -279,6 +280,43 @@ describe("follow-ups, replies, stats, erase", () => {
     expect(t2.followUp.create).not.toHaveBeenCalled();
   });
 
+  it("follow-up PATCH completes/cancels own rows, 404s foreign ones", async () => {
+    const t = tx();
+    t.followUp.findFirst.mockResolvedValueOnce(null);
+    mocks.withTenantContext.mockImplementationOnce(async (_tid: string, fn: any) => fn(t));
+    const nf = await fuPATCH(req("http://x/fu", {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: "nope", action: "complete" }),
+    }));
+    expect(nf.status).toBe(404);
+
+    const t2 = tx();
+    t2.followUp.findFirst.mockResolvedValueOnce({ id: "f1", status: "completed" });
+    mocks.withTenantContext.mockImplementationOnce(async (_tid: string, fn: any) => fn(t2));
+    const reused = await fuPATCH(req("http://x/fu", {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: "f1", action: "complete" }),
+    }));
+    const j: any = await reused.json();
+    expect(j.reused).toBe(true);
+    expect(t2.followUp.update).not.toHaveBeenCalled();
+
+    const t3 = tx();
+    t3.followUp.findFirst.mockResolvedValueOnce({ id: "f2", status: "pending" });
+    t3.followUp.update.mockResolvedValueOnce({ id: "f2", status: "completed" });
+    mocks.withTenantContext.mockImplementationOnce(async (_tid: string, fn: any) => fn(t3));
+    const done = await fuPATCH(req("http://x/fu", {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: "f2", action: "complete" }),
+    }));
+    expect(done.status).toBe(200);
+    expect(t3.followUp.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "f2" } }),
+    );
+
+    const bad = await fuPATCH(req("http://x/fu", {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: "f2", action: "launch" }),
+    }));
+    expect(bad.status).toBe(400);
+  });
+
   it("stats count only the session tenant", async () => {
     const t = tx();
     mocks.withTenantContext.mockImplementationOnce(async (_tid: string, fn: any) => fn(t));
@@ -288,6 +326,51 @@ describe("follow-ups, replies, stats, erase", () => {
     const j: any = await res.json();
     expect(j.stats).toMatchObject({ leadsTotal: 0, emailsSent: 0 });
     expect(Date.parse(j.stats.generatedAt)).not.toBeNaN();
+  });
+
+  it("replies/stats read replyStatus from OutreachOrder, never OutreachEmail", async () => {
+    // Regression: replyStatus lives on OutreachOrder in prisma/schema.prisma.
+    // Querying tx.outreachEmail with replyStatus throws a Prisma validation
+    // error in production (authenticated 500). The strict fake below mimics
+    // that schema constraint so a regression fails here instead of in prod.
+    const strict = tx();
+    const schemaError = () => { throw new Error("Unknown field `replyStatus` for OutreachEmail"); };
+    strict.outreachEmail.findMany.mockImplementation(async (a: any) => {
+      if (JSON.stringify(a ?? {}).includes("replyStatus")) schemaError();
+      return [];
+    });
+    strict.outreachEmail.count.mockImplementation(async (a: any) => {
+      if (JSON.stringify(a ?? {}).includes("replyStatus")) schemaError();
+      return 0;
+    });
+    mocks.withTenantContext.mockImplementation(async (_tid: string, fn: any) => fn(strict));
+    const r = await repliesGET(req("http://x/api/acquisition/replies"));
+    expect(r.status).toBe(200);
+    expect(strict.outreachOrder.findMany).toHaveBeenCalled();
+    const s = await statsGET();
+    expect(s.status).toBe(200);
+    const orderCounts = strict.outreachOrder.count.mock.calls.length;
+    expect(orderCounts).toBeGreaterThanOrEqual(7);
+  });
+
+  it("outreach send is rate-limited per tenant (429 after budget)", async () => {
+    __resetRateLimits();
+    let last = 0;
+    for (let i = 0; i < 31; i++) {
+      const res = await sendPOST(req("http://x/api/acquisition/outreach/send", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: "o1" }),
+      }));
+      last = res.status;
+    }
+    expect(last).toBe(429);
+    const limited = await sendPOST(req("http://x/api/acquisition/outreach/send", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId: "o1" }),
+    }));
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("Retry-After")).toBeTruthy();
+    __resetRateLimits();
   });
 
   it("erase requires confirmation and never touches identity/billing", async () => {

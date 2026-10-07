@@ -1,8 +1,10 @@
 ﻿"use server";
 
 import { randomUUID } from "node:crypto";
+import { headers } from "next/headers";
 import { prisma } from "./db";
 import { lookupUserByEmail } from "./context";
+import { clientIpFromHeaders, consumeRateLimit } from "./rate-limit";
 import bcrypt from "bcryptjs";
 
 export interface ResetRequestResult {
@@ -11,10 +13,28 @@ export interface ResetRequestResult {
   message?: string;
 }
 
+/**
+ * `headers()` throws outside a request scope, so fall back to a stable
+ * sentinel rather than failing the request.
+ */
+async function resetCallerIp(): Promise<string> {
+  try {
+    return clientIpFromHeaders(await headers());
+  } catch {
+    return "no-request-scope";
+  }
+}
+
 export async function requestPasswordReset(
   _prev: ResetRequestResult,
   formData: FormData,
 ): Promise<ResetRequestResult> {
+  // Stop an attacker using this endpoint to mail-bomb a third party's inbox.
+  const ip = await resetCallerIp();
+  if (!consumeRateLimit(`reset:${ip}`, "passwordReset").allowed) {
+    return { ok: false, error: "Too many reset requests. Please try again later." };
+  }
+
   const emailRaw = formData.get("email");
   const email = typeof emailRaw === "string" ? emailRaw.trim().toLowerCase() : "";
   if (!email || !email.includes("@")) {

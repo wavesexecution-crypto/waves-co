@@ -4,6 +4,7 @@ import { withTenantContext } from "@/lib/context";
 import { isOrderOwnedByTenant } from "@/lib/billing";
 import { LEASE_PRICES, isPaidLeaseType } from "@/lib/leases";
 import { createRazorpayOrder, getRazorpayKeyId, isRazorpayConfigured } from "@/lib/razorpay";
+import { clientIpFromHeaders, consumeRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { randomUUID } from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,15 @@ export async function POST(req: Request) {
     if (!session?.user?.tenantId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     const tenantId = session.user.tenantId as string;
     const userId = (session.user as any).id as string | undefined;
+
+    const limit = consumeRateLimit(`${tenantId}:${clientIpFromHeaders(req.headers)}`, "billing");
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "rate_limited", detail: "Too many payment attempts. Please wait and try again." },
+        { status: 429, headers: rateLimitHeaders(limit) },
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const leaseType = body.leaseType as string;
     // Locked commercial model: only paid leases can be ordered. Trial has no

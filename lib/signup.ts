@@ -1,8 +1,10 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { headers } from "next/headers";
 import { prisma } from "./db";
 import { withTenantContext } from "./context";
+import { clientIpFromHeaders, consumeRateLimit } from "./rate-limit";
 import bcrypt from "bcryptjs";
 
 export interface SignupResult {
@@ -29,6 +31,19 @@ function isSlugConflict(err: unknown): boolean {
   const target = e?.meta?.target;
   const fields = Array.isArray(target) ? target.map(String) : [String(target ?? "")];
   return fields.includes("slug");
+}
+
+/**
+ * Resolve the caller's IP for shaping. `headers()` throws when the action runs
+ * outside a request scope (tests, background invocation), so degrade to a
+ * stable sentinel instead of failing the request.
+ */
+async function callerIp(): Promise<string> {
+  try {
+    return clientIpFromHeaders(await headers());
+  } catch {
+    return "no-request-scope";
+  }
 }
 
 /** Creates tenant + user atomically. Two companies may share a display name,
@@ -66,6 +81,14 @@ async function createAccountAtomically(
 }
 
 export async function signupAction(_prevState: SignupResult, formData: FormData): Promise<SignupResult> {
+  // Rate limit on the caller IP before touching the database. Signup is the
+  // entry point for disposable-account trial farming.
+  const ip = await callerIp();
+  const limit = consumeRateLimit(ip, "signup");
+  if (!limit.allowed) {
+    return { ok: false, error: "Too many accounts created from this network. Please contact support." };
+  }
+
   const tenantName = typeof formData.get("tenantName") === "string" ? (formData.get("tenantName") as string).trim() : "";
   const name = typeof formData.get("name") === "string" ? (formData.get("name") as string).trim() : "";
   const email = typeof formData.get("email") === "string" ? (formData.get("email") as string).trim().toLowerCase() : "";

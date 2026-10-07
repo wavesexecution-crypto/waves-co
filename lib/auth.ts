@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { lookupUserByEmail } from "./context";
+import { consumeRateLimit } from "./rate-limit";
 
 function resolveSecret(): string {
   const s = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
@@ -62,6 +63,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = typeof credentials?.email === "string" ? credentials.email.trim().toLowerCase() : "";
         const password = typeof credentials?.password === "string" ? credentials.password : "";
         if (!email || !password) return null;
+
+        // Throttle repeated password attempts against a single account so the
+        // 2-day proof (and any paid lease) cannot be brute-forced. Keyed on
+        // the submitted email because NextAuth does not surface the client IP
+        // here; this is a per-account brake, not a distributed bot filter.
+        const attempts = consumeRateLimit(`login:${email}`, "login");
+        if (!attempts.allowed) return null;
+
         const user = await findUserByEmail(email);
         if (!user?.passwordHash) return null;
         const ok = await bcrypt.compare(password, user.passwordHash);

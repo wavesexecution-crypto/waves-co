@@ -2,15 +2,25 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/context";
 import { TRIAL_DAYS } from "@/lib/leases";
+import { clientIpFromHeaders, consumeRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const session = await auth();
     if (!session?.user?.tenantId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     const tenantId = session.user.tenantId as string;
     const userId = (session.user as any).id as string | undefined;
+
+    // The 2-day proof is free, so trial claiming is the primary abuse surface.
+    const limit = consumeRateLimit(`${tenantId}:${clientIpFromHeaders(req.headers)}`, "trialStart");
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "rate_limited", detail: "Too many trial attempts. Please contact support if this is unexpected." },
+        { status: 429, headers: rateLimitHeaders(limit) },
+      );
+    }
     const result = await withTenantContext(tenantId, async (tx: any) => {
       const existing = await tx.acquisitionEntitlement.findUnique({ where: { tenantId } });
       if (existing) {

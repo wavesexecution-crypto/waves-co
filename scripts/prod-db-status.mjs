@@ -25,6 +25,18 @@ try {
   await show("user_cols", `SELECT column_name FROM information_schema.columns WHERE table_name='User' ORDER BY ordinal_position`);
   await show("poldefs", `SELECT c.relname AS t, p.polname AS name, p.polcmd AS cmd, pg_get_expr(p.polqual, p.polrelid) AS using, pg_get_expr(p.polwithcheck, p.polrelid) AS check FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid WHERE c.relname IN ('AcquisitionEntitlement','AcquisitionOrder','OutreachOrder','LeadResearch','Notification','AuditLog','User','Tenant') ORDER BY 1,2`);
   await show("login_fn", `SELECT p.proname, r.rolname AS owner, p.prosecdef AS secdefiner, p.proconfig FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner WHERE p.proname='lookup_user_by_email'`);
+  await show("membership", `SELECT pg_has_role('wavesco_app', 'wavesco', 'member') AS app_is_member_of_owner`);
+  try {
+    process.env.DATABASE_URL = process.env.DIRECT_URL;
+    const { PrismaClient: C2 } = await import("@prisma/client");
+    const direct = new C2();
+    const u = await direct.$queryRawUnsafe(`SELECT current_user`);
+    console.log("=== PROD-DB-STATUS direct_user ===");
+    console.log(JSON.stringify(u));
+    await direct.$disconnect();
+  } catch (e) {
+    console.log("=== PROD-DB-STATUS direct_user ERROR: " + String(e && e.message || e).slice(0, 200));
+  }
   await show("notif_cols", `SELECT column_name FROM information_schema.columns WHERE table_name='Notification' ORDER BY ordinal_position`);
   await show("tenant_cols", `SELECT column_name FROM information_schema.columns WHERE table_name='Tenant' ORDER BY ordinal_position`);
   await show("uniq_existing", `SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid IN ('"AcquisitionEntitlement"'::regclass, '"AcquisitionOrder"'::regclass) AND contype='u'`);

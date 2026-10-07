@@ -19,6 +19,7 @@ function run(cmd, { strict = true } = {}) {
   }
 }
 
+run('pnpm exec prisma migrate resolve --applied "20260901000000_lookup_user_by_email"', { strict: false });
 run('pnpm exec prisma migrate resolve --applied "20260903000000_add_notification_system"', { strict: false });
 run("pnpm exec prisma migrate deploy");
 run("pnpm exec prisma migrate status");

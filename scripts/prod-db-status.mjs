@@ -1,36 +1,40 @@
 // TEMPORARY production DB diagnostic (read-only). Runs inside a Vercel
-// production build where DATABASE_URL/DIRECT_URL exist. Prints schema truth
-// (table/column presence, applied migrations, RLS/FORCE flags). No secrets,
-// no data rows, no writes. Removed after diagnosis.
-import { execSync } from "node:child_process";
+// production build AFTER `prisma generate`, using the build's DATABASE_URL.
+// Prints schema truth only (no row data, no secrets, no writes).
+// Removed after diagnosis.
+import { PrismaClient } from "@prisma/client";
 
-function sh(cmd) {
-  try {
-    return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 90000 });
-  } catch (e) {
-    return `EXIT_NONZERO: ${(e.stdout || "")}\n${(e.stderr || "").slice(0, 2000)}`;
-  }
+const prisma = new PrismaClient();
+const q = (sql) => prisma.$queryRawUnsafe(sql);
+try {
+  console.log("=== PROD-DB-STATUS tables ===");
+  console.log(JSON.stringify(await q(
+    `SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename IN
+     ('Tenant','User','AcquisitionEntitlement','AcquisitionOrder','LeadResearch','OutreachOrder','OutreachEmail','FollowUp','LeadLifecycleEvent','AcquisitionProfile','Notification','AuditLog','GenerationBatch','VerificationToken') ORDER BY 1`
+  )));
+  console.log("=== PROD-DB-STATUS entitlement columns ===");
+  console.log(JSON.stringify(await q(
+    `SELECT column_name FROM information_schema.columns WHERE table_name='AcquisitionEntitlement' ORDER BY ordinal_position`
+  )));
+  console.log("=== PROD-DB-STATUS suspect columns ===");
+  console.log(JSON.stringify(await q(
+    `SELECT table_name, column_name FROM information_schema.columns WHERE
+     (table_name='OutreachOrder' AND column_name IN ('sendClaimedAt','sendAttempts','replyStatus','deliveryStatus')) OR
+     (table_name='LeadResearch') AND column_name IN ('business','email') OR
+     (table_name='FollowUp' AND column_name='outreachOrderId') OR
+     (table_name='AcquisitionOrder' AND column_name IN ('idempotencyKey','providerOrderId','paymentId'))`
+  )));
+  console.log("=== PROD-DB-STATUS policies ===");
+  console.log(JSON.stringify(await q(
+    `SELECT tablename, policyname FROM pg_policies WHERE schemaname='public' ORDER BY 1,2`
+  )));
+  console.log("=== PROD-DB-STATUS force-vs-enabled ===");
+  console.log(JSON.stringify(await q(
+    `SELECT relname, relforcerowsecurity AS forced FROM pg_class WHERE relnamespace='public'::regnamespace AND relrowsecurity AND relkind='r' ORDER BY 1`
+  )));
+} catch (e) {
+  console.log("PROBE_ERROR: " + String(e && e.message || e).slice(0, 1000));
+} finally {
+  await prisma.$disconnect();
+  console.log("=== PROD-DB-STATUS done ===");
 }
-
-console.log("=== PROD-DB-STATUS migrate status ===");
-console.log(sh("pnpm exec prisma migrate status"));
-
-const sql = `
-SELECT 'TABLES:' || string_agg(tablename, ',' ORDER BY tablename)
-FROM pg_tables WHERE schemaname='public' AND tablename IN
-('Tenant','User','AcquisitionEntitlement','AcquisitionOrder','LeadResearch','OutreachOrder','OutreachEmail','FollowUp','LeadLifecycleEvent','AcquisitionProfile','Notification','AuditLog','GenerationBatch','VerificationToken','_prisma_migrations');
-SELECT 'MIGRATIONS_APPLIED:' || COALESCE(string_agg(migration_name, ',' ORDER BY migration_name), '(none)');
-SELECT 'ENT_COLS:' || string_agg(column_name, ',' ORDER BY ordinal_position)
-FROM information_schema.columns WHERE table_name='AcquisitionEntitlement';
-SELECT 'ORDER_COLS_HAS_SENDCLAIM:' || count(*)::text
-FROM information_schema.columns WHERE table_name='OutreachOrder' AND column_name IN ('sendClaimedAt','sendAttempts');
-SELECT 'RLS_FORCED_TABLES:' || COALESCE(string_agg(relname, ','), '(none)')
-FROM pg_class WHERE relnamespace='public'::regnamespace AND relforcerowsecurity;
-SELECT 'RLS_ENABLED_NO_FORCE:' || count(*)::text
-FROM pg_class WHERE relnamespace='public'::regnamespace AND relrowsecurity AND NOT relforcerowsecurity AND relkind='r';
-`;
-console.log("=== PROD-DB-STATUS schema probe ===");
-const fs = await import("node:fs");
-fs.writeFileSync("/tmp/probe.sql", sql);
-console.log(sh("pnpm exec prisma db execute --stdin < /tmp/probe.sql"));
-console.log("=== PROD-DB-STATUS done ===");

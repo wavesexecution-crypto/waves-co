@@ -18,8 +18,8 @@ export function Footer() {
               Your next customers, found and contacted.
             </h2>
             <p className="max-w-md text-sm leading-relaxed text-body">
-              Acquisition OS researches your market, finds and verifies prospects, scores them, and runs personalised
-              outreach — with your approval before anything sends.
+              Acquisition OS turns your business context into personalised outreach drafts — reviewed and approved by
+              you before anything sends, with a readable record of every send.
             </p>
           </div>
 

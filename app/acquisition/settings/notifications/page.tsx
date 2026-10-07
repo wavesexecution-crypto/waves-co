@@ -10,7 +10,7 @@ export default function NotificationsSettingsPage() {
   const [notifications, setNotifications] = useState([
     { id: "new-leads", label: "New leads found", description: "Get notified when Acquisition OS discovers new prospects", enabled: true },
     { id: "emails-ready", label: "Emails ready for review", description: "Know when new outreach emails need your approval", enabled: true },
-    { id: "replies", label: "Replies received", description: "Instant notification when prospects respond", enabled: true },
+    { id: "replies", label: "Replies received", description: "Requires inbound capture, which is not connected yet", enabled: true },
     { id: "followups", label: "Follow-ups due", description: "Reminder when it's time to follow up with prospects", enabled: true },
     { id: "weekly-report", label: "Weekly report", description: "Summary of your acquisition activity every Monday", enabled: false },
     { id: "cycle-complete", label: "Cycle complete", description: "Notification when an acquisition cycle finishes", enabled: true },

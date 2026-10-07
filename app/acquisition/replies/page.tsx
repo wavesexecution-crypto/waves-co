@@ -186,7 +186,8 @@ export default async function RepliesPage({
               No replies yet
             </h3>
             <p className="mt-2 text-sm text-body">
-              Replies will appear here when prospects respond to your outreach. Nothing is shown until a real reply is recorded.
+              Inbound capture is not connected yet. Replies from prospects arrive in the inbox you send
+              from, and are not imported into this view automatically. Send history is on the Outreach page.
             </p>
             {counts.all === 0 && (
               <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">

@@ -52,24 +52,24 @@ const problems = [
 
 const solution = [
   {
-    title: "Discover",
-    body: "Acquisition OS researches your market and finds businesses that match your ideal customer, without you hiring a researcher.",
+    title: "Brief",
+    body: "Describe your business, what you sell and who you want to reach. That context drives every draft that follows.",
   },
   {
-    title: "Verify",
-    body: "Every prospect's email is verified and every contact record is checked before it reaches an approval queue.",
+    title: "Import",
+    body: "Bring the prospects you already have in mind. Each contact is validated before it reaches your queue.",
   },
   {
-    title: "Qualify",
-    body: "Leads are scored against your criteria, so you review a ranked list instead of a spreadsheet of guesses.",
+    title: "Draft",
+    body: "Every lead gets a drafted email written from your stored research and your business context — no generic blast.",
   },
   {
-    title: "Outreach",
-    body: "Personalised emails are drafted for each lead and queued for your approval. Nothing is ever sent automatically.",
+    title: "Approve",
+    body: "You read it and you decide. Nothing is ever sent without your explicit approval.",
   },
   {
-    title: "Follow up",
-    body: "Replies are routed to you, follow-ups run on schedule, and bounces and unsubscribes are honoured automatically.",
+    title: "Track",
+    body: "Send status, send history and outreach counts stay visible to you. You report the replies you receive.",
   },
 ];
 
@@ -203,7 +203,7 @@ export default function Home() {
               <h3 className="mt-4 font-heading text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy sm:text-[22px]">
                 Deliverable contact data
               </h3>
-              <p className="mt-3 flex-grow text-sm leading-7 text-body">Email status verified before anything is queued, so bounces and damage to your domain reputation are avoided.</p>
+              <p className="mt-3 flex-grow text-sm leading-7 text-body">Each contact is validated before it is queued, so invalid addresses never reach your approval queue.</p>
             </article>
           </Reveal>
           <Reveal delay={0.1}>
@@ -219,9 +219,11 @@ export default function Home() {
             <article className="premium-card flex h-full flex-col rounded-sm bg-white p-8">
               <div className="font-mono text-xs uppercase tracking-[0.14em] text-accent">follow up</div>
               <h3 className="mt-4 font-heading text-[20px] font-semibold leading-[1.3] tracking-[-0.01em] text-navy sm:text-[22px]">
-                Replies and a readable report
+                Send history you can read
               </h3>
-              <p className="mt-3 flex-grow text-sm leading-7 text-body">Replies routed to you, follow-ups on schedule, and a report showing what was sent, opened and answered.</p>
+              <p className="mt-3 flex-grow text-sm leading-7 text-body">
+                Every send is recorded with its outcome, so you always know what actually went out. Inbound replies arrive in your own inbox, and you record the ones that matter.
+              </p>
             </article>
           </Reveal>
         </div>

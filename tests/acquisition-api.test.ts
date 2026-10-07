@@ -231,17 +231,21 @@ describe("approval gates + idempotency", () => {
   });
 
   it("send requires APPROVED, records honest FAILED without provider, SENT on confirm", async () => {
+    // Non-approved order is refused before any claim or provider work.
     const t = tx();
-    t.outreachOrder.findFirst.mockResolvedValueOnce({ id: "o1", leadKey: "k", status: "READY_FOR_APPROVAL" });
-    mocks.withTenantContext.mockImplementationOnce(async (_tid: string, fn: any) => fn(t));
+    t.outreachOrder.findFirst.mockResolvedValue({ id: "o1", leadKey: "k", status: "READY_FOR_APPROVAL" });
+    mocks.withTenantContext.mockImplementation(async (_tid: string, fn: any) => fn(t));
     const blocked = await sendPOST(req("http://x/send", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: "o1" }),
     }));
     expect(blocked.status).toBe(409);
 
+    // Approved order wins the send claim (updateMany -> count 1) and, with no
+    // provider configured, fails honestly instead of being marked SENT.
     const t2 = tx();
-    t2.outreachOrder.findFirst.mockResolvedValueOnce({ id: "o2", leadKey: "k", status: "APPROVED", email: "a@b.co", subject: "s", body: "b" });
-    mocks.withTenantContext.mockImplementationOnce(async (_tid: string, fn: any) => fn(t2));
+    t2.outreachOrder.findFirst.mockResolvedValue({ id: "o2", leadKey: "k", status: "APPROVED", email: "a@b.co", subject: "s", body: "b", sendId: null, sendClaimedAt: null });
+    t2.outreachOrder.updateMany.mockResolvedValue({ count: 1 });
+    mocks.withTenantContext.mockImplementation(async (_tid: string, fn: any) => fn(t2));
     const failed = await sendPOST(req("http://x/send", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: "o2" }),
     }));
@@ -249,6 +253,8 @@ describe("approval gates + idempotency", () => {
     const fj: any = await failed.json();
     expect(fj.order.status).toBe("FAILED");
     expect(fj.order.sendError).toMatch(/provider not configured/i);
+    // The claim must be released so the order can be retried once configured.
+    expect(fj.order.sendClaimedAt).toBeNull();
   });
 });
 

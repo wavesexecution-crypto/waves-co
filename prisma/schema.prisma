@@ -299,6 +299,11 @@ model OutreachOrder {
   status                 String    @default("READY_FOR_APPROVAL")
   approvalId             String?
   sendId                 String?
+  // Concurrency claim for outbound sends. Set by the single sender that wins
+  // the compare-and-set; cleared when a send fails or completes, and treated
+  // as reclaimable once stale so a crashed send cannot wedge an order forever.
+  sendClaimedAt          DateTime? @map("send_claimed_at")
+  sendAttempts           Int       @default(0)
   deliveryStatus         String?
   replyStatus            String?
   sendError              String?

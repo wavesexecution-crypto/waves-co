@@ -13,10 +13,13 @@
 -- Additive only: new nullable column + counter. No data is rewritten, no table
 -- is dropped, no existing column changes meaning.
 
-ALTER TABLE "OutreachOrder" ADD COLUMN IF NOT EXISTS "sendClaimedAt" TIMESTAMP(3);
+-- NOTE (2026-10-08): column name corrected to the Prisma-mapped
+-- "send_claimed_at" (schema: sendClaimedAt @map("send_claimed_at")) before
+-- this migration ever ran in production. "sendAttempts" has no @map.
+ALTER TABLE "OutreachOrder" ADD COLUMN IF NOT EXISTS "send_claimed_at" TIMESTAMP(3);
 ALTER TABLE "OutreachOrder" ADD COLUMN IF NOT EXISTS "sendAttempts" INTEGER NOT NULL DEFAULT 0;
 
-CREATE INDEX IF NOT EXISTS "OutreachOrder_sendClaimedAt_idx" ON "OutreachOrder"("sendClaimedAt");
+CREATE INDEX IF NOT EXISTS "OutreachOrder_sendClaimedAt_idx" ON "OutreachOrder"("send_claimed_at");
 
 -- Keep RLS intact and tenant-scoped for the new columns (the table already has
 -- an ALL policy scoped to app.tenant_id; no new policy is required because RLS

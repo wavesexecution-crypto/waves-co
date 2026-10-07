@@ -6,34 +6,25 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const q = (sql) => prisma.$queryRawUnsafe(sql);
+const show = async (label, sql) => {
+  try {
+    console.log(`=== PROD-DB-STATUS ${label} ===`);
+    console.log(JSON.stringify(await q(sql)));
+  } catch (e) {
+    console.log(`=== PROD-DB-STATUS ${label} ERROR: ` + String(e && e.message || e).slice(0, 300));
+  }
+};
 try {
-  console.log("=== PROD-DB-STATUS tables ===");
-  console.log(JSON.stringify(await q(
-    `SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename IN
-     ('Tenant','User','AcquisitionEntitlement','AcquisitionOrder','LeadResearch','OutreachOrder','OutreachEmail','FollowUp','LeadLifecycleEvent','AcquisitionProfile','Notification','AuditLog','GenerationBatch','VerificationToken') ORDER BY 1`
-  )));
-  console.log("=== PROD-DB-STATUS entitlement columns ===");
-  console.log(JSON.stringify(await q(
-    `SELECT column_name FROM information_schema.columns WHERE table_name='AcquisitionEntitlement' ORDER BY ordinal_position`
-  )));
-  console.log("=== PROD-DB-STATUS suspect columns ===");
-  console.log(JSON.stringify(await q(
-    `SELECT table_name, column_name FROM information_schema.columns WHERE
-     (table_name='OutreachOrder' AND column_name IN ('sendClaimedAt','sendAttempts','replyStatus','deliveryStatus')) OR
-     (table_name='LeadResearch') AND column_name IN ('business','email') OR
-     (table_name='FollowUp' AND column_name='outreachOrderId') OR
-     (table_name='AcquisitionOrder' AND column_name IN ('idempotencyKey','providerOrderId','paymentId'))`
-  )));
-  console.log("=== PROD-DB-STATUS policies ===");
-  console.log(JSON.stringify(await q(
-    `SELECT tablename, policyname FROM pg_policies WHERE schemaname='public' ORDER BY 1,2`
-  )));
-  console.log("=== PROD-DB-STATUS force-vs-enabled ===");
-  console.log(JSON.stringify(await q(
-    `SELECT relname, relforcerowsecurity AS forced FROM pg_class WHERE relnamespace='public'::regnamespace AND relrowsecurity AND relkind='r' ORDER BY 1`
-  )));
-} catch (e) {
-  console.log("PROBE_ERROR: " + String(e && e.message || e).slice(0, 1000));
+  await show("role", `SELECT current_user`);
+  await show("owners", `SELECT tablename, tableowner FROM pg_tables WHERE schemaname='public' AND tablename IN ('Tenant','User','AcquisitionEntitlement','AcquisitionOrder','LeadResearch','OutreachOrder','FollowUp','Notification') ORDER BY 1`);
+  await show("ent_cols", `SELECT column_name, data_type, column_default FROM information_schema.columns WHERE table_name='AcquisitionEntitlement' ORDER BY ordinal_position`);
+  await show("order_cols", `SELECT column_name, data_type, column_default FROM information_schema.columns WHERE table_name='AcquisitionOrder' ORDER BY ordinal_position`);
+  await show("outreach_cols", `SELECT column_name FROM information_schema.columns WHERE table_name='OutreachOrder' ORDER BY ordinal_position`);
+  await show("followup_cols", `SELECT column_name FROM information_schema.columns WHERE table_name='FollowUp' ORDER BY ordinal_position`);
+  await show("lead_cols", `SELECT column_name FROM information_schema.columns WHERE table_name='LeadResearch' ORDER BY ordinal_position`);
+  await show("user_cols", `SELECT column_name FROM information_schema.columns WHERE table_name='User' ORDER BY ordinal_position`);
+  await show("poldefs", `SELECT c.relname AS t, p.polname AS name, p.polcmd AS cmd, pg_get_expr(p.polqual, p.polrelid) AS using, pg_get_expr(p.polwithcheck, p.polrelid) AS check FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid WHERE c.relname IN ('AcquisitionEntitlement','AcquisitionOrder','OutreachOrder','LeadResearch','Notification','AuditLog','User','Tenant') ORDER BY 1,2`);
+  await show("login_fn", `SELECT p.proname, r.rolname AS owner, p.prosecdef AS secdefiner, p.proconfig FROM pg_proc p JOIN pg_roles r ON r.oid=p.proowner WHERE p.proname='lookup_user_by_email'`);
 } finally {
   await prisma.$disconnect();
   console.log("=== PROD-DB-STATUS done ===");

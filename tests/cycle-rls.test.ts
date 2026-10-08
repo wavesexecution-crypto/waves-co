@@ -49,4 +49,16 @@ describe("cycle_os migration RLS", () => {
     expect(mig).toContain('"messageVariant"');
     expect(mig).toContain('"sendProvider"');
   });
+
+  it("runtime role is granted DML on every new table (else 42501 in prod)", () => {
+    const grants = readFileSync(
+      join(here, "..", "prisma", "migrations", "20261009000003_cycle_os_grants", "migration.sql"),
+      "utf8",
+    );
+    expect(grants).toMatch(/GRANT SELECT, INSERT, UPDATE, DELETE/);
+    expect(grants).toMatch(/TO wavesco_app/);
+    for (const t of NEW_TABLES) {
+      expect(grants).toContain(`"${t}"`);
+    }
+  });
 });

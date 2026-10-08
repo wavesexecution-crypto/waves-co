@@ -44,6 +44,12 @@ describe("validators", () => {
     // applied downstream), but variant copy stays strict.
     expect(() => v({ subject: "Hello there", body: "x".repeat(100), variants: [{ label: null, subject: "s", body: "y".repeat(60) }] })).not.toThrow();
     expect(() => v({ subject: "Hello there", body: "x".repeat(100), variants: [{ subject: "s", body: "tiny" }] })).toThrow();
+    // Single-level envelope observed live ({primary: {...}}): unwrapped, then
+    // strictly validated — never silently accepted, never fabricated.
+    const nested = v({ primary: { subject: "Hello there", opening: "Hi", body: "x".repeat(100), cta: "Call?" } });
+    expect(nested.subject).toBe("Hello there");
+    expect(() => v({ primary: { subject: "Hello there" } })).toThrow();
+    expect(() => v({ wrapper: { nope: 1 }, subject: "Hello there", body: "short" })).toThrow();
   });
 
   it("REPLY_CLASSIFICATION rejects unknown statuses", () => {

@@ -208,11 +208,11 @@ export const OPERATIONS: Record<AiOperation, OperationSpec> = {
   },
   EMAIL_GENERATION: {
     buildPrompt: (ctx: { brainSummary: string; goal: any; count?: number }) => ({
-      system: `${BASE_RULES}\nYou write a cold outreach email (subject, opening, body 80-220 words, cta) plus up to 2 variants, grounded ONLY in the company summary and goal below. Plain text, no placeholders like [Name]. Sign off with the company name. subject and body are REQUIRED non-empty strings — never null, never empty. ${jsonFormatNote()}`,
+      system: `${BASE_RULES}\nYou write a cold outreach email (subject, opening, body 80-220 words, cta) plus up to 2 variants, grounded ONLY in the company summary and goal below. Plain text, no placeholders like [Name]. Sign off with the company name. subject and body are REQUIRED non-empty strings — never null, never empty. Put them at the TOP LEVEL of the JSON object with EXACTLY these keys (subject, opening, body, cta, variants) — never nest the email under another key like "primary" or "email". ${jsonFormatNote()}`,
       user: `${dataBlock("COMPANY SUMMARY", ctx.brainSummary, 4000)}\n${dataBlock("CYCLE GOAL (JSON)", JSON.stringify(ctx.goal ?? {}).slice(0, 3000))}`,
       format: EMAIL_JSON_SCHEMA,
     }),
-    validate: (p) => EmailGenerationSchema.parse(p),
+    validate: (p) => EmailGenerationSchema.parse(normalizeEmailPayload(p)),
   },
   REPLY_CLASSIFICATION: {
     buildPrompt: (ctx: { originalSubject: string; originalBody: string; replyText: string }) => ({
@@ -242,6 +242,31 @@ export const OPERATIONS: Record<AiOperation, OperationSpec> = {
     },
   },
 };
+
+/**
+ * Unwrap a single-level envelope when the model nests the email under a key
+ * like "primary" despite the schema (observed live). Conservative: only
+ * unwraps when the nested object carries subject+body strings; the result
+ * still goes through full strict validation afterwards.
+ */
+export function normalizeEmailPayload(parsed: unknown): unknown {
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const p = parsed as Record<string, unknown>;
+    if (typeof p.subject !== "string") {
+      for (const v of Object.values(p)) {
+        if (
+          v && typeof v === "object" && !Array.isArray(v) &&
+          typeof (v as Record<string, unknown>).subject === "string" &&
+          typeof (v as Record<string, unknown>).body === "string"
+        ) {
+          const inner = v as Record<string, unknown>;
+          return { ...inner, variants: Array.isArray(p.variants) ? p.variants : (inner.variants ?? []) };
+        }
+      }
+    }
+  }
+  return parsed;
+}
 
 /** Validate + enforce the numeric anti-fabrication rule for narratives. */
 export function validateCycleNarrative(metrics: unknown, parsed: unknown): any {

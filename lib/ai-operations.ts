@@ -50,7 +50,9 @@ const EmailGenerationSchema = z.object({
   opening: z.string().max(500).nullish(),
   body: z.string().min(50).max(6000),
   cta: z.string().max(300).nullish(),
-  variants: z.array(z.object({ label: z.string().max(60), subject: z.string().max(200), body: z.string().min(50).max(6000) })).max(3).default([]),
+  // Variant labels are cosmetic: defaulted deterministically when the model
+  // omits them. subject/body stay strict (a variant without copy is useless).
+  variants: z.array(z.object({ label: z.string().max(60).nullish(), subject: z.string().max(200), body: z.string().min(50).max(6000) })).max(3).default([]),
 });
 
 const ReplyClassificationSchema = z.object({
@@ -106,7 +108,7 @@ const EMAIL_JSON_SCHEMA = {
           subject: { type: "string", maxLength: 200 },
           body: { type: "string", minLength: 50, maxLength: 6000 },
         },
-        required: ["label", "subject", "body"],
+        required: ["subject", "body"],
       },
     },
   },

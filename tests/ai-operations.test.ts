@@ -40,6 +40,10 @@ describe("validators", () => {
     const v = OPERATIONS.EMAIL_GENERATION.validate;
     expect(() => v({ subject: "Hello there", body: "x".repeat(100) })).not.toThrow();
     expect(() => v({ subject: "Hello there", body: "short" })).toThrow();
+    // Variant labels are cosmetic: null is tolerated (deterministic default
+    // applied downstream), but variant copy stays strict.
+    expect(() => v({ subject: "Hello there", body: "x".repeat(100), variants: [{ label: null, subject: "s", body: "y".repeat(60) }] })).not.toThrow();
+    expect(() => v({ subject: "Hello there", body: "x".repeat(100), variants: [{ subject: "s", body: "tiny" }] })).toThrow();
   });
 
   it("REPLY_CLASSIFICATION rejects unknown statuses", () => {

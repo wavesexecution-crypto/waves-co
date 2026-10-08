@@ -155,12 +155,19 @@ export async function applyAiResult(tx: any, job: any, tenantId: string, validat
       if (dup) return false;
       const agg = await tx.messageTemplate.aggregate({ where: { tenantId, cycleId }, _max: { version: true } });
       const version = ((agg._max?.version as number | null) ?? 0) + 1;
+      // Variant labels are cosmetic: default deterministically when the
+      // model omits them (subject/body stayed strict in validation).
+      const variants = (Array.isArray(validated.variants) ? validated.variants : []).map((v: any, i: number) => ({
+        label: (typeof v?.label === "string" && v.label.trim() ? v.label : `Variant ${String.fromCharCode(65 + i)}`).slice(0, 60),
+        subject: v.subject,
+        body: v.body,
+      }));
       await tx.messageTemplate.create({
         data: {
           tenantId, cycleId, version,
           subject: validated.subject, opening: validated.opening ?? null,
           body: validated.body, cta: validated.cta ?? null,
-          structure: null, variants: validated.variants ?? [],
+          structure: null, variants,
           status: "draft", source: "ai", aiJobId: job.id,
         },
       });

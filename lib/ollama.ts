@@ -41,7 +41,7 @@ export class OllamaOversizeError extends Error {
 }
 
 const DEFAULT_BASE_URL = "https://ollama.com/api";
-const DEFAULT_MODEL = "gpt-oss:120b-cloud";
+const DEFAULT_MODEL = "gemma4:31b-cloud";
 const DEFAULT_TIMEOUT_MS = 60_000;
 export const MAX_OUTPUT_CHARS = 24_000;
 

@@ -138,8 +138,8 @@ export default function ColdMailPage() {
           Send queue
         </h1>
         <p className="mt-2 text-sm text-body">
-          Approved orders send exactly once each. Statuses are honest: SENT means the provider accepted the message —
-          delivery is shown only with provider evidence, otherwise unknown.
+          Approved orders send exactly once each. Statuses are honest: SENT means accepted for delivery —
+          delivery is shown only with delivery evidence, otherwise unknown.
         </p>
       </Reveal>
 
@@ -213,7 +213,7 @@ export default function ColdMailPage() {
                   <p className="font-medium text-navy">A · Have WAVES do it</p>
                   <p className="mt-1 text-muted">
                     {provider.waves.available
-                      ? "WAVES sends via its provider under platform limits. Replies land in your own inbox."
+                      ? "WAVES sends for you under platform limits. Replies land in your own inbox."
                       : "WAVES sending is not configured right now."}
                   </p>
                   <Button variant="secondary" disabled={busy} onClick={() => selectProvider("waves")} >

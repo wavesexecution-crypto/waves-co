@@ -86,7 +86,7 @@ export default function EmailDesignPage() {
   async function generate() {
     setBusy(true);
     setError(null);
-    setGenState("Saving a deterministic draft first — AI variants follow when the provider responds…");
+    setGenState("Saving a deterministic draft first — WAVE AI variants follow…");
     try {
       const res = await fetch("/api/acquisition/templates", {
         method: "POST",
@@ -97,7 +97,7 @@ export default function EmailDesignPage() {
       if (!res.ok) throw new Error(j.error ?? "Generate failed.");
       setGenState(
         j.generationJob
-          ? `Deterministic v${j.template.version} saved. AI job ${j.generationJob.status} — check Jobs for progress.`
+          ? `Deterministic v${j.template.version} saved. WAVE AI job ${j.generationJob.status} — check Jobs for progress.`
           : `Deterministic v${j.template.version} saved.`,
       );
       await loadTemplates(cycleId);
@@ -160,7 +160,7 @@ export default function EmailDesignPage() {
           </select>
         </label>
         <Button variant="secondary" disabled={busy || !cycleId} onClick={generate}>
-          Generate (deterministic + AI)
+          Generate (draft + WAVE AI)
         </Button>
       </div>
 
@@ -194,7 +194,7 @@ export default function EmailDesignPage() {
           <div className="rounded-lg border border-line bg-white p-6">
             <h2 className="font-heading text-[20px] font-semibold text-navy">Versions</h2>
             {approved ? (
-              <p className="mt-1 text-sm text-success">v{approved.version} approved{approved.source === "ai" ? " (AI)" : ""}.</p>
+              <p className="mt-1 text-sm text-success">v{approved.version} approved{approved.source === "ai" ? " (WAVE AI)" : ""}.</p>
             ) : (
               <p className="mt-1 text-sm text-muted">No approved version yet for this cycle.</p>
             )}

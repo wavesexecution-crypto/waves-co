@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { Navigation } from "@/components/navigation";
 import { Providers } from "@/components/providers";
-import { siteConfig } from "@/app/site";
-import { Button } from "@/components/button";
+import { withTenantContext } from "@/lib/context";
+import { CycleNav } from "./cycle-nav";
 
+/**
+ * Acquisition OS shell: exactly ONE header. Brand + the six cycle steps +
+ * workspace overflow + account. No global marketing nav and no second module
+ * nav inside the product (that duplication is gone on purpose).
+ */
 export default async function AcquisitionLayout({
   children,
 }: Readonly<{
@@ -12,48 +16,56 @@ export default async function AcquisitionLayout({
 }>) {
   const session = await auth();
   const user = session?.user;
+  const tenantId = user?.tenantId as string | undefined;
+
+  let cycleLabel: string | null = null;
+  if (tenantId) {
+    try {
+      const active = await withTenantContext(tenantId, (tx: any) =>
+        tx.acquisitionCycle.findFirst({ where: { tenantId, status: "ACTIVE" }, orderBy: { cycleNumber: "desc" } }),
+      );
+      if (active) cycleLabel = `Wave Cycle ${String(active.cycleNumber).padStart(2, "0")}`;
+    } catch {
+      cycleLabel = null;
+    }
+  }
 
   return (
     <Providers session={session}>
-      <Navigation />
       <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-14 items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Link href="/acquisition" className="flex items-center gap-2 text-navy hover:opacity-80 transition-opacity">
-                <span className="font-heading text-xl font-bold tracking-[0.12em] uppercase">WAVES</span>
-                <span className="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.14em] text-accent">ACQUISITION OS</span>
-              </Link>
-              <nav className="hidden md:flex items-center gap-1 bg-paper/50 rounded-lg p-1" aria-label="Acquisition OS navigation">
-                <Link href="/acquisition" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Home</Link>
-                <Link href="/acquisition/onboarding" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Setup</Link>
-                <Link href="/acquisition/leads" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Leads</Link>
-                <Link href="/acquisition/outreach" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Outreach</Link>
-                <Link href="/acquisition/replies" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Replies</Link>
-                <Link href="/acquisition/results" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Reports</Link>
-                <Link href="/acquisition/billing" className="px-3 py-1.5 text-sm font-medium text-body rounded-md hover:bg-white hover:text-navy transition-colors">Billing</Link>
-              </nav>
-            </div>
-            <div className="flex items-center gap-3">
-              {user ? (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted">{user.name || user.email}</span>
-                  <Link href="/acquisition/settings" className="px-3 py-1.5 text-sm font-medium text-body rounded-md border border-line hover:bg-paper transition-colors">
-                    Settings
-                  </Link>
-                </div>
-              ) : (
-                <Link href="/login?callbackUrl=/acquisition" className="px-4 py-1.5 text-sm font-medium text-white bg-navy rounded-md hover:bg-navy-light transition-colors">
-                  Sign in
+        <div className="mx-auto flex h-12 max-w-7xl items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
+          <Link href="/acquisition" className="flex shrink-0 items-center gap-2 hover:opacity-80 transition-opacity" aria-label="Acquisition OS home">
+            <span className="font-heading text-base font-bold tracking-[0.12em] uppercase">Waves</span>
+            <span className="hidden font-mono text-[9px] uppercase tracking-[0.14em] text-accent sm:inline">
+              Acquisition OS
+            </span>
+          </Link>
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <CycleNav cycleLabel={cycleLabel} />
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {user ? (
+              <>
+                <span className="hidden max-w-32 truncate text-[13px] text-muted md:inline">{user.name || user.email}</span>
+                <Link
+                  href="/acquisition/settings"
+                  className="rounded-md border border-line px-2.5 py-1.5 text-[13px] font-medium text-body hover:bg-white transition-colors"
+                >
+                  Settings
                 </Link>
-              )}
-            </div>
+              </>
+            ) : (
+              <Link
+                href="/login?callbackUrl=/acquisition"
+                className="rounded-md bg-navy px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-navy-light transition-colors"
+              >
+                Sign in
+              </Link>
+            )}
           </div>
         </div>
       </header>
-      <main className="min-h-[calc(100vh-4rem)] bg-paper">
-        {children}
-      </main>
+      <main className="min-h-[calc(100vh-3rem)] bg-paper">{children}</main>
     </Providers>
   );
 }

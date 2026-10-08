@@ -44,7 +44,7 @@ export default function JobsPage() {
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.error ?? "Poll failed.");
       setNotice(
-        `Advanced ${j.ai.length} AI and ${j.n8n.length} automation jobs. Pending: ${j.states.pending}, failed visible: ${j.states.failed}.`,
+        `Advanced ${j.ai.length} WAVE AI and ${j.n8n.length} automation jobs. Pending: ${j.states.pending}, failed visible: ${j.states.failed}.`,
       );
       await refresh();
     } catch (e: any) {
@@ -74,12 +74,27 @@ export default function JobsPage() {
     }
   }
 
+  // Client-facing names for internal job codes. Provider/model details
+  // never appear here — the client sees only WAVE AI and automation work.
+  const JOB_LABELS: Record<string, string> = {
+    EMAIL_GENERATION: "Email draft",
+    REPLY_CLASSIFICATION: "Reply analysis",
+    REPLY_DIRECTION: "Response draft",
+    CYCLE_ANALYSIS: "Cycle analysis",
+    GOAL_ANALYSIS: "Goal review",
+    BRAIN_ANALYSIS: "Brain structuring",
+    LEAD_ANALYSIS: "Lead analysis",
+    "cycle.closed": "Cycle closed",
+    "send.queue.drained": "Send queue",
+  };
+
   function row(j: Job, kind: "ai" | "n8n") {
+    const label = JOB_LABELS[j.operation ?? j.event ?? ""] ?? (kind === "ai" ? "WAVE AI task" : "Automation task");
     return (
       <li key={j.id} className="flex items-center justify-between gap-3 rounded-md border border-line p-3 text-sm">
         <div>
           <p className="font-medium text-navy">
-            {j.operation ?? j.event} · {j.status}
+            {label} · {j.status}
           </p>
           <p className="font-mono text-[10px] text-muted">
             attempts {j.attempt ?? j.attempts ?? 0}
@@ -103,8 +118,8 @@ export default function JobsPage() {
           Jobs
         </h1>
         <p className="mt-2 text-sm text-body">
-          Every AI and automation job for your workspace. Polling here also advances due work — there are no hidden
-          background workers.
+          Every WAVE AI and automation job for your workspace. Polling here also advances due work — there are no
+          hidden background workers.
         </p>
       </Reveal>
 
@@ -118,10 +133,10 @@ export default function JobsPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Reveal>
           <div className="rounded-lg border border-line bg-white p-6">
-            <h2 className="font-heading text-[20px] font-semibold text-navy">AI jobs</h2>
+            <h2 className="font-heading text-[20px] font-semibold text-navy">WAVE AI jobs</h2>
             <ul className="mt-3 space-y-2">
               {aiJobs.map((j) => row(j, "ai"))}
-              {aiJobs.length === 0 ? <p className="text-sm text-muted">No AI jobs yet.</p> : null}
+              {aiJobs.length === 0 ? <p className="text-sm text-muted">No WAVE AI jobs yet.</p> : null}
             </ul>
           </div>
         </Reveal>

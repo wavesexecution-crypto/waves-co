@@ -65,7 +65,7 @@ export default function CycleReportPage() {
       const res = await fetch(`/api/acquisition/cycles/${cycleId}/close`, { method: "POST" });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.error ?? "Close failed.");
-      setNotice("Cycle closed. Metrics are final; AI narrative follows when its job completes.");
+      setNotice("Cycle closed. Metrics are final; WAVE AI analysis follows when its job completes.");
       await loadReport(cycleId);
       await loadCycles();
     } catch (e: any) {
@@ -228,7 +228,7 @@ export default function CycleReportPage() {
                 ) : (
                   <p className="mt-2 text-sm text-muted">
                     Analysis {data?.narrativeJob ? `is ${data.narrativeJob.status.toLowerCase()} (attempt ${data.narrativeJob.attempt})` : "has not run yet"}. Metrics
-                    above are final; the narrative appears here once its job validates —{" "}
+                    above are final; the WAVE AI analysis appears here once its job validates —{" "}
                     <Link href="/acquisition/cycle/jobs" className="underline">check Jobs</Link>.
                   </p>
                 )}

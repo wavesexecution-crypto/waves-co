@@ -101,35 +101,45 @@ async function executeAttempt(tenantId: string, job: any): Promise<void> {
     });
     return;
   }
-  // Tx 2 (short): validate -> apply -> usage -> settle.
-  await withTenantContext(tenantId, async (tx: any) => {
-    let validated: any;
-    try {
-      validated = job.operation === "CYCLE_ANALYSIS"
-        ? validateCycleNarrative((job.inputRef as any)?.metrics, out.parsed)
-        : spec.validate(out.parsed);
-    } catch (ve: any) {
-      const msg = `AI output failed validation: ${String(ve?.message ?? ve).slice(0, 500)}`;
-      await failJob(tx, "aiJob", job, msg, job.maxAttempts ?? AI_MAX_ATTEMPTS);
+  // Tx 2 (short): validate -> apply -> usage -> settle. The whole settle is
+  // guarded: any failure here must land on the job as a retryable error,
+  // never leave it silently leased (a platform-killed function is the only
+  // case that escapes this, and the stale-lease claim recovers that).
+  try {
+    await withTenantContext(tenantId, async (tx: any) => {
+      let validated: any;
+      try {
+        validated = job.operation === "CYCLE_ANALYSIS"
+          ? validateCycleNarrative((job.inputRef as any)?.metrics, out.parsed)
+          : spec.validate(out.parsed);
+      } catch (ve: any) {
+        const msg = `AI output failed validation: ${String(ve?.message ?? ve).slice(0, 500)}`;
+        await failJob(tx, "aiJob", job, msg, job.maxAttempts ?? AI_MAX_ATTEMPTS);
+        await tx.aiUsageLog.create({
+          data: {
+            tenantId, operation: job.operation, provider: "ollama_cloud",
+            model: resolved.model, status: "error",
+            latencyMs: Date.now() - started, error: msg.slice(0, 500),
+          },
+        }).catch(() => null);
+        return;
+      }
+      const applied = await applyAiResult(tx, job, tenantId, validated);
       await tx.aiUsageLog.create({
         data: {
-          tenantId, operation: job.operation, provider: "ollama_cloud",
-          model: resolved.model, status: "error",
-          latencyMs: Date.now() - started, error: msg.slice(0, 500),
+          tenantId, operation: job.operation, provider: "ollama_cloud", model: resolved.model,
+          status: "ok", inputTokens: out.promptTokens, outputTokens: out.outputTokens,
+          latencyMs: out.latencyMs,
         },
       }).catch(() => null);
-      return;
-    }
-    const applied = await applyAiResult(tx, job, tenantId, validated);
-    await tx.aiUsageLog.create({
-      data: {
-        tenantId, operation: job.operation, provider: "ollama_cloud", model: resolved.model,
-        status: "ok", inputTokens: out.promptTokens, outputTokens: out.outputTokens,
-        latencyMs: out.latencyMs,
-      },
-    }).catch(() => null);
-    await completeJob(tx, "aiJob", job.id, { applied, operation: job.operation });
-  });
+      await completeJob(tx, "aiJob", job.id, { applied, operation: job.operation });
+    });
+  } catch (e: any) {
+    const msg = `settle failed: ${String(e?.message ?? e).slice(0, 500)}`;
+    await withTenantContext(tenantId, async (tx: any) => {
+      await failJob(tx, "aiJob", job, msg, job.maxAttempts ?? AI_MAX_ATTEMPTS);
+    });
+  }
 }
 
 /**

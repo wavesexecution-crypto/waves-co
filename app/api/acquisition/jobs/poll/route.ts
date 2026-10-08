@@ -27,8 +27,10 @@ export async function POST(req: Request) {
     }
 
     await requireCommercialAccess(tenantId);
+    // Bounded: one AI job per poll (a single model call can take up to the
+    // Ollama timeout; serverless functions must not run long batches).
     const [ai, n8n] = await Promise.all([
-      processDueAiJobs(tenantId, 2),
+      processDueAiJobs(tenantId, 1),
       processDueN8nJobs(tenantId, 3),
     ]);
     const states = await withTenantContext(tenantId, async (tx: any) => {

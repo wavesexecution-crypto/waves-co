@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, X } from "lucide-react";
@@ -67,6 +68,7 @@ function UserAvatar({ name, email }: { name: string; email: string }) {
 }
 
 export function Navigation() {
+  const pathname = usePathname() ?? "";
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
@@ -97,6 +99,10 @@ export function Navigation() {
       document.removeEventListener("keydown", onKey);
     };
   }, [menuOpen]);
+
+  // The product shell owns its own single header under /acquisition* — the
+  // marketing nav must not render there (no duplicated navigation).
+  if (pathname === "/acquisition" || pathname.startsWith("/acquisition/")) return null;
 
   return (
     <header

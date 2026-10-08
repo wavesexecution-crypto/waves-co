@@ -88,6 +88,77 @@ export interface OperationSpec {
   validate: (parsed: unknown) => any;
 }
 
+/** Strict JSON schemas for Ollama structured outputs (required fields enforced by the model). */
+const EMAIL_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    subject: { type: "string", minLength: 3, maxLength: 200 },
+    opening: { type: "string", maxLength: 500 },
+    body: { type: "string", minLength: 50, maxLength: 6000 },
+    cta: { type: "string", maxLength: 300 },
+    variants: {
+      type: "array",
+      maxItems: 2,
+      items: {
+        type: "object",
+        properties: {
+          label: { type: "string", maxLength: 60 },
+          subject: { type: "string", maxLength: 200 },
+          body: { type: "string", minLength: 50, maxLength: 6000 },
+        },
+        required: ["label", "subject", "body"],
+      },
+    },
+  },
+  required: ["subject", "body"],
+};
+
+const REPLY_CLASS_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    replyStatus: { type: "string", enum: ["INTERESTED", "NEUTRAL", "OBJECTION", "NOT_INTERESTED"] },
+    intent: { type: "string", enum: ["High", "Medium", "Low", "Unknown"] },
+    sentiment: { type: "string", enum: ["Positive", "Neutral", "Negative", "Unknown"] },
+    summary: { type: "string", minLength: 10, maxLength: 2000 },
+    signals: { type: "array", items: { type: "string" }, maxItems: 10 },
+    objections: { type: "array", items: { type: "string" }, maxItems: 10 },
+    askingFor: { type: "string", maxLength: 1000 },
+    recommendedAction: { type: "string", maxLength: 1000 },
+  },
+  required: ["replyStatus", "intent", "sentiment", "summary"],
+};
+
+const DIRECTION_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    draftResponse: { type: "string", minLength: 20, maxLength: 4000 },
+    rationale: { type: "string", maxLength: 1000 },
+  },
+  required: ["draftResponse"],
+};
+
+const NARRATIVE_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    learnings: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 10 },
+    recommendations: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 10 },
+    targetComparison: { type: "string", maxLength: 2000 },
+    messageComparison: { type: "string", maxLength: 2000 },
+  },
+  required: ["learnings", "recommendations"],
+};
+
+const GOAL_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    strengths: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 8 },
+    gaps: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 8 },
+    suggestedTitle: { type: "string", maxLength: 200 },
+    suggestedRefinement: { type: "string", maxLength: 2000 },
+  },
+  required: ["strengths", "gaps"],
+};
+
 /**
  * Deterministic anti-fabrication guard for cycle narratives: every
  * percent / multiplier / decimal number in the narrative must already exist
@@ -119,7 +190,7 @@ function jsonFormatNote() {
 export const OPERATIONS: Record<AiOperation, OperationSpec> = {
   BRAIN_ANALYSIS: {
     buildPrompt: (ctx: { markdown: string }) => ({
-      system: `${BASE_RULES}\nYou structure company notes into a canonical Company Brain JSON object with keys: company{name,website,industry,locations[],businessModel}, offering{whatWeSell,products[],offer}, icp{roles[],industries[],companySize,painPoints}, positioning{angle,proof,exclusions}, voice{tone,rules[]}. Use null/[] when unknown. ${jsonFormatNote()}`,
+      system: `${BASE_RULES}\nYou structure company notes into a canonical Company Brain JSON object with keys: company{name,website,industry,locations[],businessModel}, offering{whatWeSell,products[],offer}, icp{roles[],industries[],companySize,painPoints}, positioning{angle,proof,exclusions}, voice{tone,rules[]}. Use null/[] when unknown. Every required field must be a non-empty value, never null — if truly unknown, use "" for strings. ${jsonFormatNote()}`,
       user: dataBlock("VAULT NOTES", ctx.markdown, 12000),
       format: { type: "object" },
     }),
@@ -127,41 +198,41 @@ export const OPERATIONS: Record<AiOperation, OperationSpec> = {
   },
   GOAL_ANALYSIS: {
     buildPrompt: (ctx: { goal: any; brainSummary: string }) => ({
-      system: `${BASE_RULES}\nYou review a cold-outreach cycle goal for clarity and targetability. Return {strengths[], gaps[], suggestedTitle?, suggestedRefinement?}. Advisory only — you do not change anything. ${jsonFormatNote()}`,
+      system: `${BASE_RULES}\nYou review a cold-outreach cycle goal for clarity and targetability. Return {strengths[], gaps[], suggestedTitle?, suggestedRefinement?} with at least one strength and one gap, all non-empty strings. Advisory only — you do not change anything. ${jsonFormatNote()}`,
       user: `${dataBlock("COMPANY SUMMARY", ctx.brainSummary, 4000)}\n${dataBlock("GOAL DRAFT (JSON)", JSON.stringify(ctx.goal ?? {}).slice(0, 4000))}`,
-      format: { type: "object" },
+      format: GOAL_JSON_SCHEMA,
     }),
     validate: (p) => GoalAnalysisSchema.parse(p),
   },
   EMAIL_GENERATION: {
     buildPrompt: (ctx: { brainSummary: string; goal: any; count?: number }) => ({
-      system: `${BASE_RULES}\nYou write a cold outreach email (subject, opening, body 80-220 words, cta) plus up to 2 variants, grounded ONLY in the company summary and goal below. Plain text, no placeholders like [Name]. Sign off with the company name. ${jsonFormatNote()}`,
+      system: `${BASE_RULES}\nYou write a cold outreach email (subject, opening, body 80-220 words, cta) plus up to 2 variants, grounded ONLY in the company summary and goal below. Plain text, no placeholders like [Name]. Sign off with the company name. subject and body are REQUIRED non-empty strings — never null, never empty. ${jsonFormatNote()}`,
       user: `${dataBlock("COMPANY SUMMARY", ctx.brainSummary, 4000)}\n${dataBlock("CYCLE GOAL (JSON)", JSON.stringify(ctx.goal ?? {}).slice(0, 3000))}`,
-      format: { type: "object" },
+      format: EMAIL_JSON_SCHEMA,
     }),
     validate: (p) => EmailGenerationSchema.parse(p),
   },
   REPLY_CLASSIFICATION: {
     buildPrompt: (ctx: { originalSubject: string; originalBody: string; replyText: string }) => ({
-      system: `${BASE_RULES}\nClassify a prospect reply. replyStatus: INTERESTED (wants next step), NEUTRAL, OBJECTION (concern to address), NOT_INTERESTED. intent High/Medium/Low/Unknown, sentiment Positive/Neutral/Negative/Unknown. summary is factual (<=120 words). ${jsonFormatNote()}`,
+      system: `${BASE_RULES}\nClassify a prospect reply. replyStatus: INTERESTED (wants next step), NEUTRAL, OBJECTION (concern to address), NOT_INTERESTED. intent High/Medium/Low/Unknown, sentiment Positive/Neutral/Negative/Unknown. summary is factual (<=120 words). All enum fields must use EXACTLY the given values; summary must be non-empty. ${jsonFormatNote()}`,
       user: `${dataBlock("ORIGINAL OUTREACH", `Subject: ${ctx.originalSubject}\n${ctx.originalBody}`, 4000)}\n${dataBlock("PROSPECT REPLY", ctx.replyText, 6000)}`,
-      format: { type: "object" },
+      format: REPLY_CLASS_JSON_SCHEMA,
     }),
     validate: (p) => ReplyClassificationSchema.parse(p),
   },
   REPLY_DIRECTION: {
     buildPrompt: (ctx: { report: any; kind: string; customText?: string }) => ({
-      system: `${BASE_RULES}\nDraft a reply response (plain text, 40-180 words, signed with the company name) following the given direction. You produce a DRAFT for human review — never claim it was sent. ${jsonFormatNote()}`,
+      system: `${BASE_RULES}\nDraft a reply response (plain text, 40-180 words, signed with the company name) following the given direction. draftResponse is REQUIRED and non-empty. You produce a DRAFT for human review — never claim it was sent. ${jsonFormatNote()}`,
       user: `${dataBlock("REPLY INTELLIGENCE (JSON)", JSON.stringify(ctx.report ?? {}).slice(0, 4000))}\nDirection: ${ctx.kind}${ctx.customText ? ` — ${ctx.customText}`.slice(0, 1000) : ""}`,
-      format: { type: "object" },
+      format: DIRECTION_JSON_SCHEMA,
     }),
     validate: (p) => ReplyDirectionSchema.parse(p),
   },
   CYCLE_ANALYSIS: {
     buildPrompt: (ctx: { metrics: unknown }) => ({
-      system: `${BASE_RULES}\nYou interpret precomputed acquisition metrics for the client. RULE: every percent, multiplier (×) or decimal number you write MUST already appear in the metrics JSON below — restate, never compute new ones. Bare integers (counts, years, step numbers) are fine. Return {learnings[], recommendations[], targetComparison?, messageComparison?}. ${jsonFormatNote()}`,
+      system: `${BASE_RULES}\nYou interpret precomputed acquisition metrics for the client. RULE: every percent, multiplier (×) or decimal number you write MUST already appear in the metrics JSON below — restate, never compute new ones. Bare integers (counts, years, step numbers) are fine. Return {learnings[], recommendations[], targetComparison?, messageComparison?} with at least one learning and one recommendation, all non-empty. ${jsonFormatNote()}`,
       user: dataBlock("DETERMINISTIC CYCLE METRICS (JSON — the only numbers you may cite)", JSON.stringify(ctx.metrics ?? {}).slice(0, 12000)),
-      format: { type: "object" },
+      format: NARRATIVE_JSON_SCHEMA,
     }),
     validate: (p) => {
       const v = CycleNarrativeSchema.parse(p);

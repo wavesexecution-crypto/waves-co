@@ -53,43 +53,38 @@ describe("client UI never exposes provider internals", () => {
 });
 
 describe("single OS navigation", () => {
-  it("acquisition layout renders one header: module nav + cycle steps, no marketing nav", () => {
+  it("acquisition layout renders one header with the module nav; marketing nav self-hides", () => {
     const layout = readFileSync(join(here, "..", "app", "acquisition", "layout.tsx"), "utf8");
     expect(layout.match(/<header/g)?.length ?? 0).toBe(1);
-    expect(layout).not.toMatch(/from ["']@\/components\/navigation["']/);
     // Control-center module navigation is preserved…
     for (const href of ["/acquisition", "/acquisition/leads", "/acquisition/outreach", "/acquisition/replies", "/acquisition/results", "/acquisition/billing"]) {
       expect(layout).toContain(`href="${href}"`);
     }
-    // …and the six-step workflow rides in the same header via CycleNav.
-    expect(layout).toMatch(/CycleNav/);
+    // …and the global marketing nav renders null inside the product, so no
+    // duplicated top navigation can appear.
+    const nav = readFileSync(join(here, "..", "components", "navigation.tsx"), "utf8");
+    expect(nav).toMatch(/\/acquisition/);
+    expect(nav).toMatch(/return null/);
   });
 
-  it("step nav covers all six steps exactly once", () => {
-    const nav = readFileSync(join(here, "..", "app", "acquisition", "cycle-nav.tsx"), "utf8");
-    for (const [n, href] of [
-      ["01", "/acquisition/cycle/brain"],
-      ["02", "/acquisition/cycle/goal"],
-      ["03", "/acquisition/cycle/email"],
-      ["04", "/acquisition/cycle/send"],
-      ["05", "/acquisition/cycle/responses"],
-      ["06", "/acquisition/cycle/report"],
-    ]) {
-      expect(nav).toContain(`"${n}"`);
-      expect(nav).toContain(href);
+  it("all six workflow step routes still exist under the engine", () => {
+    for (const step of ["brain", "goal", "email", "send", "responses", "report"]) {
+      const p = join(here, "..", "app", "acquisition", "cycle", step, "page.tsx");
+      expect(statSync(p).isFile()).toBe(true);
     }
   });
 
-  it("control-center home leads with the cycle workflow and keeps module surfaces", () => {
+  it("control-center home is the original dashboard (workflow lives in the engine, not the home)", () => {
     const home = readFileSync(join(here, "..", "app", "acquisition", "page.tsx"), "utf8");
-    // Primary operating workflow first…
-    expect(home).toMatch(/Current workflow/);
-    expect(home).toMatch(/Wave Cycle/);
-    expect(home).toMatch(/Company Brain/);
-    // …with the original command-center blocks preserved.
+    // Original command-center blocks, exactly as designed.
     expect(home).toMatch(/Your next step/);
     expect(home).toMatch(/QuickLink/);
     expect(home).toMatch(/StatCard/);
     expect(home).toMatch(/Manage lease/);
+    expect(home).toMatch(/Your command center for approved outreach/);
+    // The home is the dashboard, not a six-step marketing page: no workflow
+    // stepper copy here (the cycle engine remains behind the API + step routes).
+    expect(home).not.toMatch(/Current workflow/);
+    expect(home).not.toMatch(/Wave Cycle/);
   });
 });

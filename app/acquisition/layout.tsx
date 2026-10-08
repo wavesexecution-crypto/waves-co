@@ -1,17 +1,10 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
+import { Navigation } from "@/components/navigation";
 import { Providers } from "@/components/providers";
-import { withTenantContext } from "@/lib/context";
-import { CycleNav } from "./cycle-nav";
+import { siteConfig } from "@/app/site";
+import { Button } from "@/components/button";
 
-/**
- * Acquisition OS Control Center shell: exactly ONE header with two tiers.
- * Row 1 — the persistent command-center chrome: brand, module navigation
- * (Home/Setup/Leads/Outreach/Replies/Reports/Billing), account. Row 2 — the
- * current acquisition workflow: the six cycle steps + active cycle badge.
- * The global marketing nav hides itself inside /acquisition* (see
- * components/navigation.tsx), so no duplicated navigation can appear.
- */
 export default async function AcquisitionLayout({
   children,
 }: Readonly<{
@@ -19,22 +12,10 @@ export default async function AcquisitionLayout({
 }>) {
   const session = await auth();
   const user = session?.user;
-  const tenantId = user?.tenantId as string | undefined;
-
-  let cycleLabel: string | null = null;
-  if (tenantId) {
-    try {
-      const active = await withTenantContext(tenantId, (tx: any) =>
-        tx.acquisitionCycle.findFirst({ where: { tenantId, status: "ACTIVE" }, orderBy: { cycleNumber: "desc" } }),
-      );
-      if (active) cycleLabel = `Wave Cycle ${String(active.cycleNumber).padStart(2, "0")}`;
-    } catch {
-      cycleLabel = null;
-    }
-  }
 
   return (
     <Providers session={session}>
+      <Navigation />
       <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between gap-4">
@@ -66,12 +47,6 @@ export default async function AcquisitionLayout({
                   Sign in
                 </Link>
               )}
-            </div>
-          </div>
-          <div className="flex h-10 items-center gap-2 border-t border-line/70">
-            <span className="hidden font-mono text-[9px] uppercase tracking-[0.14em] text-muted sm:inline">Workflow</span>
-            <div className="min-w-0 flex-1 overflow-hidden">
-              <CycleNav cycleLabel={cycleLabel} />
             </div>
           </div>
         </div>

@@ -1,13 +1,11 @@
 import { auth } from "@/lib/auth";
 import { getEntitlement, hasCommercialAccess } from "@/lib/billing";
 import { fetchTenantStats } from "@/lib/acquisition";
-import { withTenantContext } from "@/lib/context";
-import { formatCycleNumber } from "@/lib/cycle";
+import { formatINRPaise } from "@/lib/leases";
 import Link from "next/link";
 import { Button } from "@/components/button";
 import { Container, Section } from "@/components/container";
 import { Reveal } from "@/components/reveal";
-import { Stepper, type CycleStep } from "./cycle/stepper";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +24,7 @@ export default async function AcquisitionHome() {
     try {
       entitlement = await getEntitlement(tenantId);
       hasAccess = hasCommercialAccess(entitlement);
-
+      
       if (entitlement?.status === "TRIAL") {
         const trialEnd = entitlement.trialExpiresAt ? new Date(entitlement.trialExpiresAt) : null;
         if (trialEnd) {
@@ -85,7 +83,7 @@ export default async function AcquisitionHome() {
   const primaryAction = (() => {
     if (!tenantId) return { label: "Start 2-Day Proof", href: "/acquisition/onboarding", description: "Set up your business and add your first prospects" };
     if (!hasAccess) return { label: "Start 2-Day Proof", href: "/acquisition/onboarding", description: "Activate your free trial to unlock the system" };
-
+    
     // Has access - check what needs attention
     if (todayStats.prospectsAdded > 0 && todayStats.emailsSent === 0) {
       return { label: "Review leads", href: "/acquisition/leads", description: `${todayStats.prospectsAdded} prospects waiting for your decision` };
@@ -99,124 +97,9 @@ export default async function AcquisitionHome() {
     if (todayStats.interested > 0) {
       return { label: "Follow up interested", href: "/acquisition/replies", description: `${todayStats.interested} prospects showed interest` };
     }
-
+    
     return { label: "Review leads", href: "/acquisition/leads", description: "Check for new prospects" };
   })();
-
-  // ----- Acquisition workflow state (the primary operating loop) -----
-  let brain: any = null;
-  let cycles: any[] = [];
-  let failedJobs = 0;
-  let pendingJobs = 0;
-  if (tenantId && hasAccess) {
-    try {
-      const state = await withTenantContext(tenantId, async (tx: any) => {
-        const b = await tx.companyBrain.findUnique({ where: { tenantId } });
-        const cs = await tx.acquisitionCycle.findMany({
-          where: { tenantId },
-          orderBy: { cycleNumber: "desc" },
-          take: 12,
-          include: {
-            goals: { orderBy: { createdAt: "asc" }, take: 1 },
-            templates: { orderBy: { version: "desc" }, take: 5 },
-            cycleReport: { select: { id: true, status: true } },
-          },
-        });
-        const failed = await tx.aiJob.count({ where: { tenantId, status: "FAILED" } });
-        const pending = await tx.aiJob.count({ where: { tenantId, status: { in: ["PENDING", "RETRY_PENDING"] } } });
-        return { brain: b, cycles: cs, failedJobs: failed, pendingJobs: pending };
-      });
-      brain = state.brain;
-      cycles = state.cycles;
-      failedJobs = state.failedJobs;
-      pendingJobs = state.pendingJobs;
-    } catch {
-      brain = null;
-      cycles = [];
-    }
-  }
-
-  const active = cycles.find((c: any) => c.status === "ACTIVE") ?? null;
-  const closed = cycles.filter((c: any) => c.status === "CLOSED");
-
-  let queueCounts = { approved: 0, sent: 0, replies: 0 };
-  if (tenantId && hasAccess && active) {
-    try {
-      queueCounts = await withTenantContext(tenantId, async (tx: any) => {
-        const [approved, sent, replies] = await Promise.all([
-          tx.outreachOrder.count({ where: { tenantId, cycleId: active.id, status: "APPROVED" } }),
-          tx.outreachOrder.count({ where: { tenantId, cycleId: active.id, status: { in: ["SENT", "DELIVERED"] } } }),
-          tx.replyReport.count({ where: { tenantId, cycleId: active.id } }),
-        ]);
-        return { approved, sent, replies };
-      });
-    } catch {
-      queueCounts = { approved: 0, sent: 0, replies: 0 };
-    }
-  }
-
-  const approvedTemplate = active?.templates?.find((t: any) => t.status === "approved") ?? null;
-  const steps: CycleStep[] = active
-    ? [
-        {
-          n: "01",
-          title: "Company Brain",
-          href: "/acquisition/cycle/brain",
-          state: brain ? "done" : "current",
-          detail: brain ? `${brain.source} · v${brain.version} · persistent` : "Set up your company context",
-        },
-        {
-          n: "02",
-          title: "Goal",
-          href: "/acquisition/cycle/goal",
-          state: active.goals?.length ? "done" : brain ? "current" : "todo",
-          detail: active.goals?.[0]?.title ?? "Define this cycle's target",
-        },
-        {
-          n: "03",
-          title: "Email Design",
-          href: "/acquisition/cycle/email",
-          state: approvedTemplate ? "done" : active.goals?.length ? "current" : "todo",
-          detail: approvedTemplate ? `v${approvedTemplate.version} approved` : "Draft and approve the message",
-        },
-        {
-          n: "04",
-          title: "Cold Mail",
-          href: "/acquisition/cycle/send",
-          state: queueCounts.sent > 0 ? "done" : approvedTemplate ? "current" : "todo",
-          detail: `${queueCounts.approved} ready · ${queueCounts.sent} sent`,
-        },
-        {
-          n: "05",
-          title: "Responses",
-          href: "/acquisition/cycle/responses",
-          state: queueCounts.replies > 0 ? "done" : queueCounts.sent > 0 ? "current" : "todo",
-          detail: queueCounts.replies > 0 ? `${queueCounts.replies} recorded` : "Record replies, direct handling",
-        },
-        {
-          n: "06",
-          title: "Cycle Report",
-          href: "/acquisition/cycle/report",
-          state: active.cycleReport ? "done" : "todo",
-          detail: active.cycleReport ? "Report ready" : "Close the cycle to generate it",
-        },
-      ]
-    : [];
-
-  const workflowHref =
-    !brain
-      ? "/acquisition/cycle/brain"
-      : !active
-        ? "/acquisition/cycle/goal"
-        : !active.goals?.length
-          ? "/acquisition/cycle/goal"
-          : !approvedTemplate
-            ? "/acquisition/cycle/email"
-            : queueCounts.sent === 0
-              ? "/acquisition/cycle/send"
-              : !active.cycleReport
-                ? "/acquisition/cycle/report"
-                : "/acquisition/cycle/report";
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -236,67 +119,6 @@ export default async function AcquisitionHome() {
           </div>
         </div>
       </Reveal>
-
-      {/* Current acquisition workflow — the primary operating loop */}
-      {tenantId && hasAccess && (
-        <Reveal className="mb-8">
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
-              {active ? `Current workflow · Wave Cycle ${String(active.cycleNumber).padStart(2, "0")}` : "Current workflow"}
-            </p>
-            {(failedJobs > 0 || pendingJobs > 0) && (
-              <Link href="/acquisition/cycle/jobs" className="text-xs text-error underline">
-                {failedJobs > 0 ? `${failedJobs} WAVE AI job${failedJobs === 1 ? "" : "s"} need attention` : `${pendingJobs} WAVE AI jobs pending`}
-              </Link>
-            )}
-          </div>
-          <div className="mt-2">
-            {active ? (
-              <>
-                <Stepper
-                  steps={steps}
-                  cycleLabel={`${active.goals?.[0]?.title ?? "Goal pending"}`}
-                />
-                <div className="mt-3">
-                  <Button href={workflowHref} size="lg" className="w-full sm:w-auto">
-                    Continue →
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="rounded-lg border border-line bg-white p-6 text-sm text-body">
-                <p>
-                  {brain
-                    ? "Company Brain is ready. Define your first goal to open Wave Cycle 01 — closing it returns here for Cycle 02."
-                    : "Start with your Company Brain (intake or Obsidian import, one canonical structure), then open Wave Cycle 01."}
-                </p>
-                <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                  <Button href="/acquisition/cycle/brain" variant={brain ? "secondary" : undefined}>
-                    01 · Company Brain
-                  </Button>
-                  <Button href="/acquisition/cycle/goal" variant={brain ? undefined : "secondary"}>
-                    02 · Goal
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-          {closed.length > 0 && (
-            <div className="mt-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted">History — immutable</p>
-              <ul className="mt-2 divide-y divide-line rounded-lg border border-line bg-white">
-                {closed.map((c: any) => (
-                  <li key={c.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
-                    <span className="font-medium text-navy">Wave Cycle {String(c.cycleNumber).padStart(2, "0")}</span>
-                    <span className="min-w-0 flex-1 truncate text-muted">{c.goals?.[0]?.title ?? "—"}</span>
-                    <span className="font-mono text-[11px] text-muted">closed</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </Reveal>
-      )}
 
       {/* Primary Next Action - The One Thing */}
       <Reveal delay={0.05} className="mb-10">

@@ -84,6 +84,23 @@ describe("settle failures stay visible", () => {
     expect(t.row.nextRetryAt).toBeTruthy();
   });
 
+  it("same-attempt repair recovers from one invalid output", async () => {
+    process.env.OLLAMA_API_KEY = "test-key";
+    let calls = 0;
+    vi.stubGlobal("fetch", async () => {
+      calls += 1;
+      const content = calls === 1
+        ? JSON.stringify({ subject: null, body: "x".repeat(100) })
+        : JSON.stringify(VALID_EMAIL);
+      return { ok: true, status: 200, json: async () => ({ message: { content }, model: "m" }) };
+    });
+    const t = txWith(false);
+    mocks.withTenantContext.mockImplementation(async (_tid: string, fn: any) => fn(t));
+    await processDueAiJobs("t1", 1);
+    expect(calls).toBe(2);
+    expect(t.row.status).toBe("COMPLETED");
+  });
+
   it("happy path still completes and applies", async () => {
     process.env.OLLAMA_API_KEY = "test-key";
     vi.stubGlobal("fetch", async () => ({

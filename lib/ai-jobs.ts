@@ -72,19 +72,42 @@ async function executeAttempt(tenantId: string, job: any): Promise<void> {
     const config = await resolveOllamaConfig(tx, tenantId);
     return { config, model: job.model || config.model };
   });
-  // External call with NO transaction held.
+  // External call with NO transaction held. Validation happens after; a
+  // single same-attempt repair call is allowed when the first output fails
+  // validation (the repair sees the errors, output is still fully validated).
   let out: any;
-  try {
-    const prompt = spec.buildPrompt(job.inputRef ?? {});
-    const { extractJson } = await import("./ollama");
+  const { extractJson } = await import("./ollama");
+  async function callModel(system: string, user: string, format: any, tag: string) {
+    const prompt = { system, user, format };
     const raw = await ollamaChat({
       system: prompt.system,
       user: prompt.user,
       format: prompt.format,
-      requestId: `${job.id}:attempt${job.attempt}`,
+      requestId: `${job.id}:attempt${job.attempt}:${tag}`,
       config: { ...resolved.config, model: resolved.model },
     });
-    out = { ...raw, parsed: extractJson(raw.content) };
+    return { ...raw, parsed: extractJson(raw.content) };
+  }
+  const firstPrompt = spec.buildPrompt(job.inputRef ?? {});
+  function validateOut(parsed: unknown) {
+    return job.operation === "CYCLE_ANALYSIS"
+      ? validateCycleNarrative((job.inputRef as any)?.metrics, parsed)
+      : spec.validate(parsed);
+  }
+  try {
+    out = await callModel(firstPrompt.system, firstPrompt.user, firstPrompt.format, "try1");
+    try {
+      out.validated = validateOut(out.parsed);
+    } catch (ve1: any) {
+      const repairSystem = `${firstPrompt.system}\nYour previous output was INVALID and rejected: ${String(
+        ve1?.message ?? ve1,
+      ).slice(0, 800)} Return the COMPLETE corrected object now (all required fields non-empty).`;
+      const repairUser = `Previous invalid output (fix every listed problem, keep everything else):\n${JSON.stringify(
+        out.parsed,
+      ).slice(0, 4000)}`;
+      out = await callModel(repairSystem, repairUser, firstPrompt.format, "repair");
+      out.validated = validateOut(out.parsed);
+    }
   } catch (e: any) {
     const msg = e?.name === "OllamaNotConfiguredError"
       ? "AI provider not configured (no API key). Job stays retryable."
@@ -107,23 +130,7 @@ async function executeAttempt(tenantId: string, job: any): Promise<void> {
   // case that escapes this, and the stale-lease claim recovers that).
   try {
     await withTenantContext(tenantId, async (tx: any) => {
-      let validated: any;
-      try {
-        validated = job.operation === "CYCLE_ANALYSIS"
-          ? validateCycleNarrative((job.inputRef as any)?.metrics, out.parsed)
-          : spec.validate(out.parsed);
-      } catch (ve: any) {
-        const msg = `AI output failed validation: ${String(ve?.message ?? ve).slice(0, 500)}`;
-        await failJob(tx, "aiJob", job, msg, job.maxAttempts ?? AI_MAX_ATTEMPTS);
-        await tx.aiUsageLog.create({
-          data: {
-            tenantId, operation: job.operation, provider: "ollama_cloud",
-            model: resolved.model, status: "error",
-            latencyMs: Date.now() - started, error: msg.slice(0, 500),
-          },
-        }).catch(() => null);
-        return;
-      }
+      const validated: any = out.validated;
       const applied = await applyAiResult(tx, job, tenantId, validated);
       await tx.aiUsageLog.create({
         data: {

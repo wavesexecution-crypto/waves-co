@@ -12,16 +12,6 @@ const STEPS = [
   { n: "06", label: "Report", href: "/acquisition/cycle/report", match: ["/acquisition/cycle/report", "/acquisition/results"] },
 ] as const;
 
-const WORKSPACE: Array<[string, string]> = [
-  ["Leads", "/acquisition/leads"],
-  ["Outreach", "/acquisition/outreach"],
-  ["Replies", "/acquisition/replies"],
-  ["Results", "/acquisition/results"],
-  ["Setup", "/acquisition/onboarding"],
-  ["Billing", "/acquisition/billing"],
-  ["Notifications", "/notifications"],
-];
-
 export function CycleNav({ cycleLabel }: { cycleLabel: string | null }) {
   const pathname = usePathname() ?? "";
   return (
@@ -44,23 +34,6 @@ export function CycleNav({ cycleLabel }: { cycleLabel: string | null }) {
           );
         })}
       </nav>
-      <span className="mx-1 hidden h-4 w-px bg-line sm:inline-block" aria-hidden="true" />
-      <details className="relative shrink-0">
-        <summary className="cursor-pointer list-none rounded-md px-2 py-1.5 text-[13px] text-body hover:bg-white hover:text-navy [&::-webkit-details-marker]:hidden">
-          Workspace
-        </summary>
-        <div className="absolute right-0 z-50 mt-1 w-44 rounded-md border border-line bg-white py-1 shadow-lg">
-          {WORKSPACE.map(([label, href]) => (
-            <Link
-              key={href}
-              href={href}
-              className="block px-3 py-1.5 text-[13px] text-body hover:bg-paper hover:text-navy"
-            >
-              {label}
-            </Link>
-          ))}
-        </div>
-      </details>
       {cycleLabel ? (
         <span className="ml-1 hidden shrink-0 rounded border border-line bg-white px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-muted lg:inline-block">
           {cycleLabel}

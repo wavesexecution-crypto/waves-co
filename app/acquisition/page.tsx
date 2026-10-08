@@ -1,10 +1,11 @@
 import { auth } from "@/lib/auth";
 import { getEntitlement, hasCommercialAccess } from "@/lib/billing";
+import { fetchTenantStats } from "@/lib/acquisition";
 import { withTenantContext } from "@/lib/context";
 import { formatCycleNumber } from "@/lib/cycle";
 import Link from "next/link";
 import { Button } from "@/components/button";
-import { Container } from "@/components/container";
+import { Container, Section } from "@/components/container";
 import { Reveal } from "@/components/reveal";
 import { Stepper, type CycleStep } from "./cycle/stepper";
 
@@ -17,6 +18,7 @@ export default async function AcquisitionHome() {
 
   let entitlement = null;
   let hasAccess = false;
+  let daysRemaining = 0;
   let accessLabel = "No active lease";
   let nextAction = { label: "Start 2-Day Proof", href: "/acquisition/onboarding", primary: true };
 
@@ -29,7 +31,7 @@ export default async function AcquisitionHome() {
         const trialEnd = entitlement.trialExpiresAt ? new Date(entitlement.trialExpiresAt) : null;
         if (trialEnd) {
           const diff = trialEnd.getTime() - Date.now();
-          const daysRemaining = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+          daysRemaining = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
           accessLabel = `Trial: ${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} remaining`;
         }
         nextAction = { label: "Lease Acquisition OS", href: "/acquisition/billing", primary: true };
@@ -37,7 +39,7 @@ export default async function AcquisitionHome() {
         const expires = entitlement.expiresAt ? new Date(entitlement.expiresAt) : null;
         if (expires) {
           const diff = expires.getTime() - Date.now();
-          const daysRemaining = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+          daysRemaining = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
           accessLabel = `Active lease: ${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} remaining`;
         }
         nextAction = { label: "Extend lease", href: "/acquisition/billing", primary: false };
@@ -56,51 +58,89 @@ export default async function AcquisitionHome() {
     }
   }
 
-  if (!tenantId || !hasAccess) {
-    return (
-      <Container className="py-16 sm:py-24">
-        <Reveal className="max-w-2xl">
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Acquisition OS</p>
-          <h1 className="mt-3 font-heading text-[34px] font-semibold leading-[1.15] tracking-[-0.015em] text-navy sm:text-[44px]">
-            The acquisition operating system.
-          </h1>
-          <p className="mt-4 max-w-xl text-[15px] leading-[1.7] text-body">
-            Company Brain → Goal → Email Design → Cold Mail → Responses → Cycle Report. Six steps, one loop, every
-            cycle numbered and permanent.
-          </p>
-          <div className="mt-6 flex items-center gap-3">
-            <span className="font-mono text-[11px] text-muted">{accessLabel}</span>
-          </div>
-          <Button href={nextAction.href} className="mt-6 w-full sm:w-auto" size="lg">
-            {nextAction.label}
-          </Button>
-        </Reveal>
-      </Container>
-    );
+  // Real counts from stored rows (zeros are honest for new workspaces).
+  let todayStats = {
+    prospectsAdded: 0,
+    emailsSent: 0,
+    replies: 0,
+    interested: 0,
+    followUpsPending: 0,
+  };
+  if (tenantId) {
+    try {
+      const s = await fetchTenantStats(tenantId);
+      todayStats = {
+        prospectsAdded: s.leadsTotal,
+        emailsSent: s.emailsSent,
+        replies: s.replies,
+        interested: s.interested,
+        followUpsPending: s.followUpsPending,
+      };
+    } catch {
+      // Keep honest zeros on load failure.
+    }
   }
 
-  const state = await withTenantContext(tenantId, async (tx: any) => {
-    const brain = await tx.companyBrain.findUnique({ where: { tenantId } });
-    const cycles = await tx.acquisitionCycle.findMany({
-      where: { tenantId },
-      orderBy: { cycleNumber: "desc" },
-      take: 12,
-      include: {
-        goals: { orderBy: { createdAt: "asc" }, take: 1 },
-        templates: { orderBy: { version: "desc" }, take: 5 },
-        cycleReport: { select: { id: true, status: true } },
-      },
-    });
-    const failedJobs = await tx.aiJob.count({ where: { tenantId, status: "FAILED" } });
-    const pendingJobs = await tx.aiJob.count({ where: { tenantId, status: { in: ["PENDING", "RETRY_PENDING"] } } });
-    return { brain, cycles, failedJobs, pendingJobs };
-  }).catch(() => ({ brain: null, cycles: [], failedJobs: 0, pendingJobs: 0 }));
+  // Determine the primary next step based on state
+  const primaryAction = (() => {
+    if (!tenantId) return { label: "Start 2-Day Proof", href: "/acquisition/onboarding", description: "Set up your business and add your first prospects" };
+    if (!hasAccess) return { label: "Start 2-Day Proof", href: "/acquisition/onboarding", description: "Activate your free trial to unlock the system" };
 
-  const active = state.cycles.find((c: any) => c.status === "ACTIVE") ?? null;
-  const closed = state.cycles.filter((c: any) => c.status === "CLOSED");
+    // Has access - check what needs attention
+    if (todayStats.prospectsAdded > 0 && todayStats.emailsSent === 0) {
+      return { label: "Review leads", href: "/acquisition/leads", description: `${todayStats.prospectsAdded} prospects waiting for your decision` };
+    }
+    if (todayStats.emailsSent > 0 && todayStats.replies === 0) {
+      return { label: "Check replies", href: "/acquisition/replies", description: `${todayStats.emailsSent} emails sent, waiting for responses` };
+    }
+    if (todayStats.replies > 0 && todayStats.interested === 0) {
+      return { label: "View replies", href: "/acquisition/replies", description: `${todayStats.replies} replies received` };
+    }
+    if (todayStats.interested > 0) {
+      return { label: "Follow up interested", href: "/acquisition/replies", description: `${todayStats.interested} prospects showed interest` };
+    }
+
+    return { label: "Review leads", href: "/acquisition/leads", description: "Check for new prospects" };
+  })();
+
+  // ----- Acquisition workflow state (the primary operating loop) -----
+  let brain: any = null;
+  let cycles: any[] = [];
+  let failedJobs = 0;
+  let pendingJobs = 0;
+  if (tenantId && hasAccess) {
+    try {
+      const state = await withTenantContext(tenantId, async (tx: any) => {
+        const b = await tx.companyBrain.findUnique({ where: { tenantId } });
+        const cs = await tx.acquisitionCycle.findMany({
+          where: { tenantId },
+          orderBy: { cycleNumber: "desc" },
+          take: 12,
+          include: {
+            goals: { orderBy: { createdAt: "asc" }, take: 1 },
+            templates: { orderBy: { version: "desc" }, take: 5 },
+            cycleReport: { select: { id: true, status: true } },
+          },
+        });
+        const failed = await tx.aiJob.count({ where: { tenantId, status: "FAILED" } });
+        const pending = await tx.aiJob.count({ where: { tenantId, status: { in: ["PENDING", "RETRY_PENDING"] } } });
+        return { brain: b, cycles: cs, failedJobs: failed, pendingJobs: pending };
+      });
+      brain = state.brain;
+      cycles = state.cycles;
+      failedJobs = state.failedJobs;
+      pendingJobs = state.pendingJobs;
+    } catch {
+      brain = null;
+      cycles = [];
+    }
+  }
+
+  const active = cycles.find((c: any) => c.status === "ACTIVE") ?? null;
+  const closed = cycles.filter((c: any) => c.status === "CLOSED");
 
   let queueCounts = { approved: 0, sent: 0, replies: 0 };
-  if (active) {
+  if (tenantId && hasAccess && active) {
     try {
       queueCounts = await withTenantContext(tenantId, async (tx: any) => {
         const [approved, sent, replies] = await Promise.all([
@@ -122,14 +162,14 @@ export default async function AcquisitionHome() {
           n: "01",
           title: "Company Brain",
           href: "/acquisition/cycle/brain",
-          state: state.brain ? "done" : "current",
-          detail: state.brain ? `${state.brain.source} · v${state.brain.version} · persistent` : "Set up your company context",
+          state: brain ? "done" : "current",
+          detail: brain ? `${brain.source} · v${brain.version} · persistent` : "Set up your company context",
         },
         {
           n: "02",
           title: "Goal",
           href: "/acquisition/cycle/goal",
-          state: active.goals?.length ? "done" : state.brain ? "current" : "todo",
+          state: active.goals?.length ? "done" : brain ? "current" : "todo",
           detail: active.goals?.[0]?.title ?? "Define this cycle's target",
         },
         {
@@ -163,8 +203,8 @@ export default async function AcquisitionHome() {
       ]
     : [];
 
-  const nextStepHref =
-    !state.brain
+  const workflowHref =
+    !brain
       ? "/acquisition/cycle/brain"
       : !active
         ? "/acquisition/cycle/goal"
@@ -179,99 +219,326 @@ export default async function AcquisitionHome() {
                 : "/acquisition/cycle/report";
 
   return (
-    <Container className="py-8">
-      <Reveal className="mb-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <Reveal className="mb-8">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Acquisition OS</p>
-            <h1 className="mt-1 font-heading text-[28px] font-semibold tracking-[-0.015em] text-navy sm:text-[34px]">
-              {active ? `Wave Cycle ${String(active.cycleNumber).padStart(2, "0")}` : "No active cycle"}
+            <h1 className="font-heading text-[32px] font-semibold tracking-[-0.015em] text-navy sm:text-[40px]">
+              Acquisition OS
             </h1>
+            <p className="mt-2 text-sm text-body">Your command center for approved outreach to your prospects.</p>
           </div>
-          <p className="font-mono text-[11px] text-muted">{accessLabel}</p>
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.14em] text-accent bg-accent/10 px-2 py-0.5 rounded">
+              {accessLabel}
+            </span>
+          </div>
         </div>
-        {active?.goals?.[0] ? (
-          <p className="mt-1 max-w-2xl text-sm text-body">
-            Goal: <span className="font-medium text-navy">{active.goals[0].title}</span>
-          </p>
-        ) : null}
       </Reveal>
 
-      {(state.failedJobs > 0 || state.pendingJobs > 0) && (
-        <Reveal className="mb-4">
-          <p className="rounded-md border border-line bg-white px-4 py-2.5 text-[13px]">
-            {state.failedJobs > 0 ? (
-              <span className="text-error">
-                {state.failedJobs} WAVE AI job{state.failedJobs === 1 ? "" : "s"} failed and needs attention.{" "}
-              </span>
-            ) : (
-              <span className="text-body">{state.pendingJobs} WAVE AI job{state.pendingJobs === 1 ? "" : "s"} pending. </span>
+      {/* Current acquisition workflow — the primary operating loop */}
+      {tenantId && hasAccess && (
+        <Reveal className="mb-8">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+              {active ? `Current workflow · Wave Cycle ${String(active.cycleNumber).padStart(2, "0")}` : "Current workflow"}
+            </p>
+            {(failedJobs > 0 || pendingJobs > 0) && (
+              <Link href="/acquisition/cycle/jobs" className="text-xs text-error underline">
+                {failedJobs > 0 ? `${failedJobs} WAVE AI job${failedJobs === 1 ? "" : "s"} need attention` : `${pendingJobs} WAVE AI jobs pending`}
+              </Link>
             )}
-            <Link href="/acquisition/cycle/jobs" className="underline">
-              Review jobs
-            </Link>
-          </p>
+          </div>
+          <div className="mt-2">
+            {active ? (
+              <>
+                <Stepper
+                  steps={steps}
+                  cycleLabel={`${active.goals?.[0]?.title ?? "Goal pending"}`}
+                />
+                <div className="mt-3">
+                  <Button href={workflowHref} size="lg" className="w-full sm:w-auto">
+                    Continue →
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-lg border border-line bg-white p-6 text-sm text-body">
+                <p>
+                  {brain
+                    ? "Company Brain is ready. Define your first goal to open Wave Cycle 01 — closing it returns here for Cycle 02."
+                    : "Start with your Company Brain (intake or Obsidian import, one canonical structure), then open Wave Cycle 01."}
+                </p>
+                <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                  <Button href="/acquisition/cycle/brain" variant={brain ? "secondary" : undefined}>
+                    01 · Company Brain
+                  </Button>
+                  <Button href="/acquisition/cycle/goal" variant={brain ? undefined : "secondary"}>
+                    02 · Goal
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          {closed.length > 0 && (
+            <div className="mt-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted">History — immutable</p>
+              <ul className="mt-2 divide-y divide-line rounded-lg border border-line bg-white">
+                {closed.map((c: any) => (
+                  <li key={c.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
+                    <span className="font-medium text-navy">Wave Cycle {String(c.cycleNumber).padStart(2, "0")}</span>
+                    <span className="min-w-0 flex-1 truncate text-muted">{c.goals?.[0]?.title ?? "—"}</span>
+                    <span className="font-mono text-[11px] text-muted">closed</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </Reveal>
       )}
 
-      {active ? (
-        <Reveal className="mb-6">
-          <Stepper steps={steps} cycleLabel={`Wave Cycle ${String(active.cycleNumber).padStart(2, "0")} · ${active.goals?.[0]?.title ?? "goal pending"}`} />
-          <div className="mt-3">
-            <Button href={nextStepHref} size="lg" className="w-full sm:w-auto">
-              Continue →
+      {/* Primary Next Action - The One Thing */}
+      <Reveal delay={0.05} className="mb-10">
+        <div className="rounded-lg border border-line bg-white p-6 sm:p-8">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent mb-4">Your next step</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1">
+              <h2 className="font-heading text-[28px] font-semibold tracking-[-0.01em] text-navy sm:text-[36px]">
+                {primaryAction.label}
+              </h2>
+              <p className="mt-2 text-base text-body">{primaryAction.description}</p>
+            </div>
+            <Button href={primaryAction.href} size="lg" className="w-full sm:w-auto shrink-0">
+              {primaryAction.label}
             </Button>
           </div>
-        </Reveal>
-      ) : (
-        <Reveal className="mb-6">
-          <div className="rounded-lg border border-line bg-white p-8 text-center">
-            <p className="text-sm text-body">
-              {state.brain
-                ? "Company Brain is ready. Define your first goal to open Wave Cycle 01."
-                : "Start with your Company Brain — intake or Obsidian import, one canonical structure."}
-            </p>
-            <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
-              <Button href="/acquisition/cycle/brain" size="lg" variant={state.brain ? "secondary" : undefined}>
-                01 · Company Brain
-              </Button>
-              <Button href="/acquisition/cycle/goal" size="lg" variant={state.brain ? undefined : "secondary"}>
-                02 · Goal
-              </Button>
+        </div>
+      </Reveal>
+
+      {/* Access Status (compact) */}
+      {tenantId && (
+        <Reveal delay={0.1} className="mb-8">
+          <div className={`rounded-lg border p-4 ${
+            entitlement?.status === "ACTIVE" ? "border-success bg-success/5" :
+            entitlement?.status === "TRIAL" ? "border-accent bg-accent/5" :
+            "border-line bg-white"
+          }`}>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                  entitlement?.status === "ACTIVE" ? "bg-success/10 text-success" :
+                  entitlement?.status === "TRIAL" ? "bg-accent/10 text-accent" :
+                  "bg-muted/20 text-muted"
+                }`}>
+                  {entitlement?.status === "ACTIVE" && <CheckCircleIcon className="h-5 w-5" />}
+                  {entitlement?.status === "TRIAL" && <ClockIcon className="h-5 w-5" />}
+                  {entitlement?.status === "TRIAL_EXPIRED" && <AlertCircleIcon className="h-5 w-5" />}
+                  {entitlement?.status === "EXPIRED" && <AlertCircleIcon className="h-5 w-5" />}
+                  {entitlement?.status === "none" && <LockIcon className="h-5 w-5" />}
+                </div>
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Access</p>
+                  <p className="font-medium text-navy">{accessLabel}</p>
+                </div>
+              </div>
+              {hasAccess ? (
+                <Link href="/acquisition/billing">
+                  <Button variant="secondary" size="sm">Manage lease</Button>
+                </Link>
+              ) : (
+                <Link href="/acquisition/billing">
+                  <Button size="sm">Get access</Button>
+                </Link>
+              )}
             </div>
           </div>
         </Reveal>
       )}
 
-      {closed.length > 0 ? (
-        <Reveal className="mb-6">
-          <h2 className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted">History — immutable</h2>
-          <ul className="mt-2 divide-y divide-line rounded-lg border border-line bg-white">
-            {closed.map((c: any) => (
-              <li key={c.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                <span className="font-medium text-navy">Wave Cycle {String(c.cycleNumber).padStart(2, "0")}</span>
-                <span className="min-w-0 flex-1 truncate text-muted">{c.goals?.[0]?.title ?? "—"}</span>
-                <span className="font-mono text-[11px] text-muted">closed</span>
-              </li>
-            ))}
-          </ul>
+      {/* Today's Activity - Only if has access and data */}
+      {tenantId && hasAccess && (todayStats.prospectsAdded > 0 || todayStats.emailsSent > 0 || todayStats.replies > 0) && (
+        <Reveal delay={0.15} className="mb-8">
+          <Section className="py-0">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Today</p>
+                <h2 className="mt-1 font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy sm:text-[28px]">
+                  Activity
+                </h2>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <StatCard label="Prospects added" value={todayStats.prospectsAdded} icon={<UsersIcon />} />
+              <StatCard label="Emails sent" value={todayStats.emailsSent} icon={<MailIcon />} />
+              <StatCard label="Replies" value={todayStats.replies} icon={<ReplyIcon />} />
+              <StatCard label="Interested" value={todayStats.interested} icon={<HeartIcon />} />
+              <StatCard label="Follow-ups pending" value={todayStats.followUpsPending} icon={<CalendarIcon />} />
+            </div>
+          </Section>
         </Reveal>
-      ) : null}
+      )}
 
-      <Reveal>
-        <p className="text-[13px] text-muted">
-          Supporting surfaces:{" "}
-          <Link href="/acquisition/leads" className="underline">Leads</Link>
-          {" · "}
-          <Link href="/acquisition/outreach" className="underline">Outreach</Link>
-          {" · "}
-          <Link href="/acquisition/replies" className="underline">Replies</Link>
-          {" · "}
-          <Link href="/acquisition/results" className="underline">Results</Link>
-          {" · "}
-          <Link href="/acquisition/billing" className="underline">Billing</Link>
-        </p>
+      {/* Quick Access - Secondary actions */}
+      <Reveal delay={0.2}>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <QuickLink
+            href="/acquisition/leads"
+            label="Leads"
+            description="Review and approve prospects"
+            disabled={!tenantId || !hasAccess}
+            icon={<UsersIcon />}
+          />
+          <QuickLink
+            href="/acquisition/outreach"
+            label="Outreach"
+            description="Review and send emails"
+            disabled={!tenantId || !hasAccess}
+            icon={<MailIcon />}
+          />
+          <QuickLink
+            href="/acquisition/replies"
+            label="Replies"
+            description="See and respond to interest"
+            disabled={!tenantId || !hasAccess}
+            icon={<ReplyIcon />} />
+          <QuickLink
+            href="/acquisition/results"
+            label="Reports"
+            description="View your acquisition report"
+            disabled={!tenantId || !hasAccess}
+            icon={<FileTextIcon />} />
+        </div>
       </Reveal>
-    </Container>
+    </div>
+  );
+}
+
+function StatCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-line bg-white p-4 sm:p-5">
+      <div className="flex items-center justify-between">
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted">{label}</p>
+        <div className="text-muted/40">{icon}</div>
+      </div>
+      <p className="mt-2 font-heading text-[28px] font-semibold tracking-[-0.02em] text-navy">{value}</p>
+    </div>
+  );
+}
+
+function QuickLink({ href, label, description, disabled, icon, className }: { href: string; label: string; description: string; disabled?: boolean; icon: React.ReactNode; className?: string }) {
+  return (
+    <Link
+      href={disabled ? "#" : href}
+      className={`rounded-lg border p-5 transition-colors flex flex-col gap-3 ${
+        disabled
+          ? "border-line bg-paper/50 opacity-50 pointer-events-none"
+          : "border-line bg-white hover:border-accent hover:bg-white"
+      } ${className ?? ""}`}
+    >
+      <div className="flex items-center gap-3">
+        <div className="text-muted">{icon}</div>
+        <h3 className="font-heading text-[18px] font-semibold tracking-[-0.01em] text-navy">{label}</h3>
+      </div>
+      <p className="text-sm text-body">{description}</p>
+    </Link>
+  );
+}
+
+// Icons
+function UsersIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function MailIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+      <polyline points="22,6 12,13 2,6" />
+    </svg>
+  );
+}
+
+function ReplyIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <polyline points="9 17 4 12 9 7" />
+      <path d="M20 18h-1a4 4 0 0 0 0-8 4 4 0 0 1 0-8h1" />
+    </svg>
+  );
+}
+
+function HeartIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
+
+function CalendarIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function CheckCircleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  );
+}
+
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+function AlertCircleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  );
+}
+
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
+function FileTextIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
   );
 }

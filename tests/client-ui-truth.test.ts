@@ -53,12 +53,16 @@ describe("client UI never exposes provider internals", () => {
 });
 
 describe("single OS navigation", () => {
-  it("acquisition layout renders one header and no global marketing nav", () => {
+  it("acquisition layout renders one header: module nav + cycle steps, no marketing nav", () => {
     const layout = readFileSync(join(here, "..", "app", "acquisition", "layout.tsx"), "utf8");
     expect(layout.match(/<header/g)?.length ?? 0).toBe(1);
-    expect(layout).not.toMatch(/components\/navigation/);
-    expect(layout).not.toContain("Outreach");
-    expect(layout).not.toContain("/acquisition/leads");
+    expect(layout).not.toMatch(/from ["']@\/components\/navigation["']/);
+    // Control-center module navigation is preserved…
+    for (const href of ["/acquisition", "/acquisition/leads", "/acquisition/outreach", "/acquisition/replies", "/acquisition/results", "/acquisition/billing"]) {
+      expect(layout).toContain(`href="${href}"`);
+    }
+    // …and the six-step workflow rides in the same header via CycleNav.
+    expect(layout).toMatch(/CycleNav/);
   });
 
   it("step nav covers all six steps exactly once", () => {
@@ -76,10 +80,16 @@ describe("single OS navigation", () => {
     }
   });
 
-  it("primary home is the cycle OS, not module cards", () => {
+  it("control-center home leads with the cycle workflow and keeps module surfaces", () => {
     const home = readFileSync(join(here, "..", "app", "acquisition", "page.tsx"), "utf8");
+    // Primary operating workflow first…
+    expect(home).toMatch(/Current workflow/);
     expect(home).toMatch(/Wave Cycle/);
     expect(home).toMatch(/Company Brain/);
-    expect(home).not.toMatch(/QuickLink/);
+    // …with the original command-center blocks preserved.
+    expect(home).toMatch(/Your next step/);
+    expect(home).toMatch(/QuickLink/);
+    expect(home).toMatch(/StatCard/);
+    expect(home).toMatch(/Manage lease/);
   });
 });

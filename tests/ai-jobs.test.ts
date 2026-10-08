@@ -104,6 +104,45 @@ describe("claimJob", () => {
   });
 });
 
+describe("failJob touches only fields that exist (strict-schema fake)", () => {
+  const FIELDS: Record<string, string[]> = {
+    aiJob: ["status", "error", "nextRetryAt", "leaseClaimedAt", "attempt", "result"],
+    n8nJob: ["status", "lastError", "nextRetryAt", "leaseClaimedAt", "attempts", "result"],
+  };
+  function strictTx(table: "aiJob" | "n8nJob", row: any) {
+    const store = { row: { ...row } };
+    return {
+      store,
+      [table]: {
+        findUnique: async () => ({ ...store.row }),
+        update: async ({ data }: any) => {
+          for (const k of Object.keys(data)) {
+            if (!FIELDS[table].includes(k)) {
+              throw new Error(`Unknown field \`${k}\` for ${table} (mirrors Prisma validation)`);
+            }
+          }
+          Object.assign(store.row, data);
+          return { ...store.row };
+        },
+      },
+    };
+  }
+
+  it("aiJob failures record `error`, never `lastError`", async () => {
+    const t = strictTx("aiJob", { id: "j1", status: "PROCESSING", attempt: 5 });
+    expect(await failJob(t as any, "aiJob", { id: "j1" }, "boom", 5)).toBe("failed");
+    expect(t.store.row).toMatchObject({ status: "FAILED", error: "boom" });
+    expect("lastError" in t.store.row).toBe(false);
+  });
+
+  it("n8nJob failures record `lastError`, never `error`", async () => {
+    const t = strictTx("n8nJob", { id: "j1", status: "PROCESSING", attempts: 1 });
+    expect(await failJob(t as any, "n8nJob", { id: "j1" }, "boom", 8)).toBe("retry");
+    expect(t.store.row).toMatchObject({ status: "RETRY_PENDING", lastError: "boom" });
+    expect("error" in t.store.row).toBe(false);
+  });
+});
+
 describe("completeJob + failJob", () => {
   it("completes only PROCESSING rows", async () => {
     const t = txWith(jobRow({ status: "PROCESSING" }));

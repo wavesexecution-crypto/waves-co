@@ -67,8 +67,13 @@ export async function resolveOllamaConfig(
     (refKey ? process.env[refKey] : null) ??
     process.env.OLLAMA_API_KEY ??
     null;
+  // Accept both base styles (https://ollama.com and https://ollama.com/api):
+  // the chat path is always /api/chat.
+  const base = (row?.baseUrl || process.env.OLLAMA_BASE_URL || DEFAULT_BASE_URL)
+    .replace(/\/$/, "")
+    .replace(/\/api$/, "");
   return {
-    baseUrl: (row?.baseUrl || process.env.OLLAMA_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, ""),
+    baseUrl: base,
     model: row?.model || process.env.OLLAMA_MODEL || DEFAULT_MODEL,
     apiKey,
     timeoutMs: DEFAULT_TIMEOUT_MS,

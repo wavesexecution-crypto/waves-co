@@ -111,10 +111,14 @@ export async function failJob(
   if (!row || row.status !== "PROCESSING") return "failed";
   const attempts = (row.attempt ?? row.attempts ?? 1) as number;
   const err = String(error ?? "unknown error").slice(0, 2000);
+  // AiJob carries `error`, N8nJob carries `lastError` — only touch the field
+  // that exists (Prisma rejects unknown fields; getting this wrong strands
+  // jobs in PROCESSING with the failure invisible).
+  const errField = table === "aiJob" ? "error" : "lastError";
   if (attempts >= maxAttempts) {
     await tx[table].update({
       where: { id: job.id },
-      data: { status: "FAILED", error: err, lastError: err, nextRetryAt: null },
+      data: { status: "FAILED", [errField]: err, nextRetryAt: null },
     });
     return "failed";
   }
@@ -122,8 +126,7 @@ export async function failJob(
     where: { id: job.id },
     data: {
       status: "RETRY_PENDING",
-      error: err,
-      lastError: err,
+      [errField]: err,
       nextRetryAt: new Date(Date.now() + retryDelayMs(attempts)),
     },
   });

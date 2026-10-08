@@ -53,6 +53,11 @@ function tx(overrides: Record<string, any> = {}) {
     campaign: table(),
     activityEvent: table(),
     acquisitionDataImport: table(),
+    acquisitionCycle: table(),
+    emailCredential: table(),
+    messageTemplate: table(),
+    companyBrain: table(),
+    cycleGoal: table(),
     auditLog: { create: vi.fn().mockResolvedValue({}) },
     ...overrides,
   };

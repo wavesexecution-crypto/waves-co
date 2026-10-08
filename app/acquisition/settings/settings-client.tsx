@@ -132,6 +132,24 @@ export function SettingsClient({ user, tenantId, hasAccess }: SettingsClientProp
         </Section>
       </Reveal>
 
+      {/* Message Template */}
+      <Reveal delay={0.12} className="mb-8">
+        <Section className="py-0">
+          <h2 className="font-heading text-[22px] font-semibold tracking-[-0.01em] text-navy mb-6">
+            Message template
+          </h2>
+          <div className="rounded-lg border border-line bg-white p-6">
+            <p className="text-sm text-muted">
+              Edit the active cycle&apos;s message without restarting anything — edits save as new versions, and
+              approved history is never rewritten.
+            </p>
+            <Link href="/acquisition/cycle/email">
+              <Button variant="secondary" className="mt-4">Edit message template</Button>
+            </Link>
+          </div>
+        </Section>
+      </Reveal>
+
       {/* Target Customer Profile */}
       <Reveal delay={0.15} className="mb-8">
         <Section className="py-0">

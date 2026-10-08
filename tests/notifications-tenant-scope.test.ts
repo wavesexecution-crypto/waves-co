@@ -80,8 +80,12 @@ describe("notification producers are wired to real lifecycle events", () => {
   });
 
   it("a failed send raises an action-required notification", () => {
-    const src = read("app/api/acquisition/outreach/send/route.ts");
-    expect(src).toMatch(/EMAIL_CONNECTION_ERROR/);
+    // The send pipeline lives in lib/outreach-send.ts (shared by the single
+    // send route and the queue drain); the route delegates to it.
+    const lib = read("lib/outreach-send.ts");
+    expect(lib).toMatch(/EMAIL_CONNECTION_ERROR/);
+    const route = read("app/api/acquisition/outreach/send/route.ts");
+    expect(route).toMatch(/executeOrderSend/);
   });
 
   it("no advertised notification is a dead hook (producers call the engine)", () => {

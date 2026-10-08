@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/context";
 import { requireCommercialAccess } from "@/lib/billing";
-import { LeadImportSchema, draftOutreachForLead, leadKeyForImport } from "@/lib/acquisition";
+import { LeadImportSchema, draftOutreachForLead, leadKeyForImport, fillTemplateTokens } from "@/lib/acquisition";
 import { onNotificationEvent } from "@/lib/notifications";
 import { clientIpFromHeaders, consumeRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 
@@ -126,6 +126,35 @@ export async function POST(req: Request) {
       const leadKey = leadKeyForImport(v.business, v.email);
       const now = new Date();
 
+      // Optional cycle attach: validates the cycle is open and inherits the
+      // cycle's approved template copy (tokens filled from lead fields) when
+      // one exists; otherwise the legacy per-lead draft is used.
+      let cycleId: string | null = null;
+      let templateCopy = { subject: "", body: "" };
+      let templateVersion: number | null = null;
+      if (v.cycleId) {
+        const cycle = await tx.acquisitionCycle.findFirst({ where: { id: v.cycleId, tenantId } });
+        if (!cycle || cycle.status === "CLOSED") return { error: "Cycle not found or already closed", status: 404 };
+        cycleId = cycle.id;
+        const approved = await tx.messageTemplate.findFirst({
+          where: { tenantId, cycleId: cycle.id, status: "approved" },
+          orderBy: { version: "desc" },
+        });
+        if (approved) {
+          const vars = {
+            businessName: v.business,
+            contactName: (v.contactName ?? "").trim().split(/\s+/)[0] || "there",
+            companyName,
+            opportunity: v.opportunity ?? "",
+          };
+          templateCopy = {
+            subject: fillTemplateTokens(approved.subject, vars),
+            body: fillTemplateTokens(approved.body, vars),
+          };
+          templateVersion = approved.version;
+        }
+      }
+
       const research = await tx.leadResearch.upsert({
         where: { tenantId_leadKey: { tenantId, leadKey } },
         create: {
@@ -155,7 +184,10 @@ export async function POST(req: Request) {
             contactName: v.contactName ?? null, contactRole: v.contactRole ?? null,
             email: v.email.trim().toLowerCase(), emailStatus: "IMPORTED",
             researchSnapshot: { leadKey, business: v.business } as any,
-            opportunity: v.opportunity ?? null, subject: draft.subject, body: draft.body,
+            opportunity: v.opportunity ?? null,
+            subject: templateCopy.subject || draft.subject,
+            body: templateCopy.body || draft.body,
+            cycleId, templateVersion,
             followupPlan: {} as any, status: "READY_FOR_APPROVAL", submittedAt: now,
           },
         });

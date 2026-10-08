@@ -62,6 +62,8 @@ export const RATE_LIMITS = {
   billing: { limit: 20, windowSeconds: 60 * 10 },
   /** Tenant-authed bulk actions: lead import, approve/reject, email sending. */
   outreach: { limit: 30, windowSeconds: 60 * 10 },
+  /** Cycle-OS mutations: brain, goals, templates, reply handling, reports. */
+  cycle: { limit: 30, windowSeconds: 60 * 10 },
 } as const;
 
 export type RateLimitSurface = keyof typeof RATE_LIMITS;

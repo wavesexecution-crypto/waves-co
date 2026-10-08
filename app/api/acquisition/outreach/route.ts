@@ -21,6 +21,7 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url);
     const group = (url.searchParams.get("group") ?? "all").toLowerCase();
+    const cycleId = url.searchParams.get("cycleId") || undefined;
     const groups: Record<string, string[]> = {
       ready: ["READY_FOR_APPROVAL", "PENDING"],
       approved: ["APPROVED"],
@@ -32,7 +33,14 @@ export async function GET(req: Request) {
     }
 
     const result = await withTenantContext(tenantId, async (tx: any) => {
-      const where: any = { tenantId };
+      // Optional cycle scope (additive: without cycleId behavior is unchanged).
+      let cycle: any = null;
+      if (cycleId) {
+        cycle = await tx.acquisitionCycle.findFirst({ where: { id: cycleId, tenantId } });
+        if (!cycle) return { error: "Cycle not found", status: 404 };
+      }
+      const scope: any = cycle ? { cycleId: cycle.id } : {};
+      const where: any = { tenantId, ...scope };
       if (group !== "all") where.status = { in: groups[group] };
       const orders = await tx.outreachOrder.findMany({
         where,
@@ -42,15 +50,17 @@ export async function GET(req: Request) {
           id: true, leadKey: true, businessName: true, contactName: true,
           contactRole: true, email: true, subject: true, body: true,
           status: true, sendId: true, deliveryStatus: true, sendError: true,
+          templateVersion: true, messageVariant: true, cycleId: true,
           decidedAt: true, sentAt: true, createdAt: true, updatedAt: true,
         },
       });
       const counts: Record<string, number> = {};
       for (const [k, v] of Object.entries(groups)) {
-        counts[k] = await tx.outreachOrder.count({ where: { tenantId, status: { in: v } } });
+        counts[k] = await tx.outreachOrder.count({ where: { tenantId, ...scope, status: { in: v } } });
       }
-      return { orders, counts };
+      return { orders, counts, cycle };
     });
+    if ((result as any).error) return NextResponse.json({ error: (result as any).error }, { status: (result as any).status ?? 400 });
     return NextResponse.json(result);
   } catch (e: any) {
     if (e.message?.includes("UNAUTHORIZED")) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

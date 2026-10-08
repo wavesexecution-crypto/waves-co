@@ -299,6 +299,11 @@ model OutreachOrder {
   status                 String    @default("READY_FOR_APPROVAL")
   approvalId             String?
   sendId                 String?
+  // Cycle + template provenance for cycle-scoped reporting. Nullable so
+  // pre-cycle rows keep working; set at import/send time for new rows.
+  cycleId                String?
+  templateVersion        Int?
+  messageVariant         String?
   // Concurrency claim for outbound sends. Set by the single sender that wins
   // the compare-and-set; cleared when a send fails or completes, and treated
   // as reclaimable once stale so a crashed send cannot wedge an order forever.
@@ -626,6 +631,278 @@ model NotificationPreference {
 
   @@unique([tenantId, category, channel])
   @@index([tenantId])
+}
+
+// --- Acquisition Cycle OS (6-step loop) -----------------------------------
+// Canonical, tenant-scoped cycle state. Database is the source of truth;
+// Ollama and n8n are workers that read jobs and write validated results.
+// Historical cycles are immutable: no update/delete API exists for closed
+// cycles, templates keep versions, goals are cloned (never mutated).
+
+// STEP 1 — persistent Company Brain. One canonical row per tenant,
+// produced either by intake (AcquisitionProfile) or Obsidian import.
+// Both paths write the SAME payload shape (see lib/brain.ts).
+model CompanyBrain {
+  id        String   @id @default(cuid())
+  tenantId  String   @unique
+  source    String   @default("intake") // intake | obsidian | merged
+  version   Int      @default(1)
+  status    String   @default("draft") // draft | active
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  revisions CompanyBrainRevision[]
+
+  @@index([tenantId, status])
+  @@map("CompanyBrain")
+}
+
+model CompanyBrainRevision {
+  id        String       @id @default(cuid())
+  tenantId  String
+  brainId   String
+  brain     CompanyBrain @relation(fields: [brainId], references: [id], onDelete: Cascade)
+  version   Int
+  source    String
+  payload   Json
+  createdAt DateTime     @default(now())
+
+  @@index([tenantId, brainId, version])
+  @@map("CompanyBrainRevision")
+}
+
+// STEP 2..6 container. cycleNumber is per-tenant, assigned atomically.
+model AcquisitionCycle {
+  id          String   @id @default(cuid())
+  tenantId    String
+  cycleNumber Int
+  status      String   @default("ACTIVE") // ACTIVE | CLOSED
+  goalId      String?
+  sendProvider String  @default("waves") // waves | custom (see lib/email-provider.ts)
+  startedAt   DateTime @default(now())
+  closedAt    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  goals     CycleGoal[]
+  templates MessageTemplate[]
+  aiJobs    AiJob[]
+  n8nJobs   N8nJob[]
+  reports   ReplyReport[]
+  cycleReport CycleReport?
+
+  @@unique([tenantId, cycleNumber])
+  @@index([tenantId, status])
+  @@map("AcquisitionCycle")
+}
+
+// STEP 2 — cycle-specific goal. Cloned rows carry sourceGoalId; history is
+// never mutated (code refuses writes once the cycle is CLOSED).
+model CycleGoal {
+  id             String   @id @default(cuid())
+  tenantId       String
+  cycleId        String
+  cycle          AcquisitionCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  title          String
+  audience       String?
+  segment        String?
+  geography      String?
+  companyTraits  Json?
+  qualification  Json?
+  exclusions     Json?
+  outcome        String?
+  angle          String?
+  constraints    Json?
+  status         String   @default("active") // active | archived
+  source         String   @default("new") // new | clone
+  sourceGoalId   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId, cycleId])
+  @@map("CycleGoal")
+}
+
+// STEP 3 — message template versions. Approval is explicit; edits create new
+// versions; approved versions are never mutated.
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  tenantId  String
+  cycleId   String
+  cycle     AcquisitionCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  version   Int      @default(1)
+  subject   String
+  opening   String?
+  body      String
+  cta       String?
+  structure Json?
+  variants  Json?
+  status    String   @default("draft") // draft | approved
+  source    String   @default("manual") // manual | deterministic | ai
+  aiJobId   String?
+  approvedAt DateTime?
+  approvedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cycleId, version])
+  @@index([tenantId, cycleId, status])
+  @@map("MessageTemplate")
+}
+
+// Async AI work. PENDING -> PROCESSING -> COMPLETED, or PROCESSING ->
+// FAILED -> RETRY_PENDING -> PROCESSING. Leased claims make recovery safe;
+// idempotencyKey makes retries safe. Results are validated before persist.
+model AiJob {
+  id             String    @id @default(cuid())
+  tenantId       String
+  cycleId        String?
+  cycle          AcquisitionCycle? @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  operation      String    // BRAIN_ANALYSIS | GOAL_ANALYSIS | EMAIL_GENERATION | REPLY_CLASSIFICATION | REPLY_SUMMARY | REPLY_DIRECTION | CYCLE_ANALYSIS | LEAD_ANALYSIS
+  model          String
+  attempt        Int       @default(0)
+  maxAttempts    Int       @default(5)
+  idempotencyKey String    @unique
+  inputRef       Json
+  status         String    @default("PENDING") // PENDING | PROCESSING | COMPLETED | FAILED | RETRY_PENDING
+  leaseClaimedAt DateTime?
+  result         Json?
+  error          String?
+  nextRetryAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([tenantId, status, nextRetryAt])
+  @@index([idempotencyKey])
+  @@map("AiJob")
+}
+
+// n8n automation bridge. The OS database stays authoritative: n8n receives
+// signed events and reports back; jobs survive n8n outages as retryable.
+model N8nJob {
+  id             String    @id @default(cuid())
+  tenantId       String
+  cycleId        String?
+  cycle          AcquisitionCycle? @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  event          String
+  payload        Json
+  status         String    @default("PENDING") // PENDING | PROCESSING | COMPLETED | FAILED | RETRY_PENDING
+  idempotencyKey String    @unique
+  attempts       Int       @default(0)
+  result         Json?
+  lastError      String?
+  nextRetryAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([tenantId, status, nextRetryAt])
+  @@index([idempotencyKey])
+  @@map("N8nJob")
+}
+
+// Exactly-once log for inbound n8n webhook events.
+model N8nEvent {
+  id        String   @id @default(cuid())
+  tenantId  String
+  eventId   String   @unique
+  jobId     String?
+  event     String
+  outcome   String   @default("applied") // applied | duplicate | rejected
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@map("N8nEvent")
+}
+
+// STEP 5 — Reply Intelligence. One live report per order (upsert on new
+// inbound content); direction/takeover are separate persisted actions.
+model ReplyReport {
+  id                   String    @id @default(cuid())
+  tenantId             String
+  cycleId              String?
+  cycle                AcquisitionCycle? @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  orderId              String
+  leadKey              String?
+  prospectName         String?
+  company              String?
+  replyText            String?
+  replyReceivedAt      DateTime?
+  replyStatus          String    @default("UNCLASSIFIED") // UNCLASSIFIED | INTERESTED | NEUTRAL | OBJECTION | NOT_INTERESTED
+  intent               String    @default("Unknown") // High | Medium | Low | Unknown
+  sentiment            String    @default("Unknown") // Positive | Neutral | Negative | Unknown
+  summary              String?
+  signals              Json?
+  objections           Json?
+  askingFor            String?
+  recommendedAction    String?
+  recommendedDirection String?
+  source               String    @default("manual") // manual | ai
+  aiJobId              String?
+  takenOverAt          DateTime?
+  takenOverBy          String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  directions ReplyDirection[]
+
+  @@unique([tenantId, orderId])
+  @@index([tenantId, cycleId])
+  @@map("ReplyReport")
+}
+
+model ReplyDirection {
+  id            String      @id @default(cuid())
+  tenantId      String
+  replyReportId String
+  report        ReplyReport @relation(fields: [replyReportId], references: [id], onDelete: Cascade)
+  kind          String      // answer | qualify | inform | book | custom | takeover
+  customText    String?
+  draftResponse String?
+  status        String      @default("pending") // pending | acknowledged | done
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([tenantId, replyReportId])
+  @@map("ReplyDirection")
+}
+
+// STEP 6 — immutable cycle report. Metrics are deterministic; narrative is
+// AI-interpreted and validated. Exactly one row per cycle; no update API.
+model CycleReport {
+  id            String   @id @default(cuid())
+  tenantId      String
+  cycleId       String   @unique
+  cycle         AcquisitionCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  cycleNumber   Int
+  metrics       Json
+  narrative     Json?
+  narrativeJobId String?
+  status        String   @default("final") // final | final_metrics_pending_narrative
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@map("CycleReport")
+}
+
+// STEP 4 — client-owned sending credential. The provider API key is NEVER
+// stored in plaintext: AES-256-GCM with the server-only AUTH_SECRET (see
+// lib/email-provider.ts). Only label + last4 + verification state live here
+// in the clear. One credential per tenant; disconnect deletes the row.
+model EmailCredential {
+  id         String    @id @default(cuid())
+  tenantId   String    @unique
+  provider   String    @default("resend")
+  label      String?
+  keyLast4   String?
+  keyCipher  String?
+  keyIv      String?
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@map("EmailCredential")
 }
 
 // --- Billing / Lease (Acquisition OS) — ONE product, lease duration only, no tiers

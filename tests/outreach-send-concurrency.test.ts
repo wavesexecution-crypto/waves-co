@@ -57,8 +57,11 @@ function makeSharedDb(order: any) {
         return { ...row };
       }),
     },
-    leadLifecycleEvent: { create: vi.fn(async ({ data }: any) => data) },
+      leadLifecycleEvent: { create: vi.fn(async ({ data }: any) => data) },
     auditLog: { create: vi.fn(async ({ data }: any) => data) },
+    acquisitionCycle: { findFirst: vi.fn(async () => null) },
+    emailCredential: { findUnique: vi.fn(async () => null) },
+    messageTemplate: { findFirst: vi.fn(async () => null) },
   };
 }
 

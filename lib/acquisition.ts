@@ -73,6 +73,7 @@ export const LeadImportSchema = z.object({
   category: z.string().trim().max(200).nullish(),
   opportunity: z.string().trim().max(2000).nullish(),
   notes: z.string().trim().max(2000).nullish(),
+  cycleId: z.string().min(1).max(100).nullish(),
 });
 
 export type LeadImport = z.infer<typeof LeadImportSchema>;
@@ -161,6 +162,34 @@ export const FollowUpUpdateSchema = z.object({
 });
 
 export type FollowUpUpdate = z.infer<typeof FollowUpUpdateSchema>;
+
+/** Fill {{tokens}} from lead/company fields. Unknown tokens stay visible. */
+export function fillTemplateTokens(template: string, vars: Record<string, string | null | undefined>): string {
+  let out = String(template ?? "");
+  for (const [k, v] of Object.entries(vars)) {
+    out = out.split(`{{${k}}}`).join(v ?? "");
+  }
+  return out;
+}
+
+/** Deterministic cycle template: always available, never AI-dependent. */
+export function deterministicCycleTemplate(companyName: string): { subject: string; opening: string; body: string; cta: string } {
+  const co = (companyName || "our company").slice(0, 120);
+  return {
+    subject: "Ideas for {{businessName}}",
+    opening: "Hi {{contactName}},",
+    body: [
+      "Hi {{contactName}},",
+      "",
+      "Came across {{businessName}} and thought this might be relevant.",
+      "",
+      `${co} helps teams like yours reach the prospects you have already identified.`,
+      "",
+      "Open to a 15-minute call to see if this fits?",
+    ].join("\n"),
+    cta: "Open to a 15-minute call to see if this fits?",
+  };
+}
 
 // ─── Stats (truthful aggregation over stored rows) ──────────────────────
 
